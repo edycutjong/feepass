@@ -1,0 +1,17 @@
+{
+  "network": "mainnet",
+  "pusdCategory": "2469acc5afa4b10cb5b5c04afb89c3a3ffd61c5da9c01e26d00951cae2a02544",
+  "pusdDecimals": 2,
+  "constructor": {
+    "ownerPk": "0371f22915afad18395dc51d840b3af9b59afb766a147b931aca83526da3913fda",
+    "feeTokens": "1",
+    "maxSubsidy": "2000",
+    "maxTopUp": "675"
+  },
+  "lanes": 20,
+  "artifactSha256": "5ece3a4e549059a058785466c6be18b3d55151a5ed91c91d66351a674f14a52a",
+  "explorerTx": "https://bchexplorer.info/tx/",
+  "demoRecipient": "bitcoincash:zzyen2cp5plph8r5uax2qsd4s83u7x3rvylahpest0",
+  "demoAmountUnits": "10",
+  "repoUrl": "https://github.com/edycutjong/feepass"
+}
