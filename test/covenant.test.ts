@@ -177,6 +177,42 @@ describe('FeePassPool covenant — every rule rejects its violation', () => {
     });
   }
 
+  // Same-category NFTs. CashScript's tokenCategory appends the capability byte for mutable/minting NFTs, so they never
+  // equal pusdCategory. An IMMUTABLE NFT introspects as the bare 32-byte category and is not rejected: that is a known,
+  // documented limit, reachable only if a PUSD-category NFT exists (it would take the PUSD minting authority to make one).
+  const mutableNft = (amount: bigint) => ({ ...pusd(amount), nft: { capability: 'mutable' as const, commitment: '' } });
+  it('R2 rejects a user coin carrying a mutable PUSD-category NFT', () => {
+    const s = setup();
+    const user = s.addUserCoin(0n, 1000n, mutableNft(100n));
+    const b = handBuilt(s, { user, outputs: ({ lane }) => [
+      { to: s.payee.tokenAddress, amount: 800n, token: pusd(10n) },
+      { to: s.user.tokenAddress, amount: 800n, token: mutableNft(89n) },
+      { to: s.pool.tokenAddress, amount: lane.satoshis - 1600n, token: pusd(2n) },
+    ] });
+    expect(() => b.debug()).toThrow(/inputs\[0\]\.tokenCategory == pusdCategory/);
+  });
+  it('R7 rejects a lane carrying a mutable PUSD-category NFT', () => {
+    const s = setup();
+    const lane = s.addLane(100_000n, 0n, mutableNft(1n));
+    const b = handBuilt(s, { lane, outputs: ({ user }) => [
+      { to: s.payee.tokenAddress, amount: 800n, token: pusd(10n) },
+      { to: s.user.tokenAddress, amount: 800n, token: pusd(user.token!.amount - 11n) },
+      { to: s.pool.tokenAddress, amount: lane.satoshis - 1600n, token: mutableNft(2n) },
+    ] });
+    expect(() => b.debug()).toThrow(/inputs\[1\]\.tokenCategory == pusdCategory/);
+  });
+  it('KNOWN LIMIT: an immutable PUSD-category NFT riding on the user coin can end up in the pool (no PUSD-category NFT is known)', () => {
+    const s = setup();
+    const immutable = (amount: bigint) => ({ ...pusd(amount), nft: { capability: 'none' as const, commitment: '' } });
+    const user = s.addUserCoin(0n, 1000n, immutable(100n));
+    const b = handBuilt(s, { user, outputs: ({ lane }) => [
+      { to: s.payee.tokenAddress, amount: 800n, token: pusd(10n) },
+      { to: s.user.tokenAddress, amount: 800n, token: pusd(89n) },
+      { to: s.pool.tokenAddress, amount: lane.satoshis - 1600n, token: immutable(2n) },
+    ] });
+    expect(() => b.debug()).not.toThrow();
+  });
+
   it('withdraw with a non-owner key is rejected', () => {
     const s = setup();
     const lane = s.addLane();
@@ -197,7 +233,7 @@ describe('FeePassPool covenant — every rule rejects its violation', () => {
     };
     const a = mk(s.addUserCoin(100n)); const b = mk(s.addUserCoin(100n));
     await s.provider.sendRawTransaction(a);
-    await expect(s.provider.sendRawTransaction(b)).rejects.toThrow();
+    await expect(s.provider.sendRawTransaction(b)).rejects.toThrow(/not found|missing|spent|unknown/i);
   });
 });
 

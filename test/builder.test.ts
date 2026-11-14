@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { binToHex, decodeTransaction, encodeTransaction, hexToBin, type TransactionCommon } from '@bitauth/libauth';
-import { buildSponsoredSend, isUsableLane, SendError } from '../src/core/sponsoredSend';
+import { buildSponsoredSend, ECDSA_SLACK_BYTES, isUsableLane, SendError } from '../src/core/sponsoredSend';
 import { signWcTransaction } from '../src/core/headlessSigner';
 import { toWizardRequest, verifySignedTx, VerifyError } from '../src/core/wizard';
 import { categoryToInternalOrder, DEFAULT_PARAMS, feeCoversSubsidy, PUSD_CATEGORY_DISPLAY } from '../src/core/params';
@@ -22,7 +22,7 @@ describe('buildSponsoredSend', () => {
     const r = send(s);
     expect(r.builder.inputs).toHaveLength(2);
     expect(r.builder.outputs).toHaveLength(3);
-    expect(r.minerFeeSats).toBe(BigInt(r.sizeBytes));
+    expect(r.minerFeeSats).toBe(BigInt(r.sizeBytes + ECDSA_SLACK_BYTES));
     expect(r.poolSubsidySats).toBeLessThanOrEqual(DEFAULT_PARAMS.maxSubsidy);
     expect(r.outputs.laneUnits).toBe(2n); // seed 1 + f 1
     expect(r.outputs.changeUnits).toBe(89n);
@@ -60,6 +60,13 @@ describe('buildSponsoredSend', () => {
     expect(codes(() => send(s, { recipient: p2sh }))).toBe('P2SH_RECIPIENT');
   });
 
+  it('refuses a lane that cannot keep its own dust, and a subsidy above C', () => {
+    const s = setup();
+    const codes = (fn: () => unknown) => { try { fn(); return 'ok'; } catch (e) { return (e as SendError).code; } };
+    expect(codes(() => send(s, { lane: s.addLane(1_200n) }))).toBe('LANE_TOO_SMALL');
+    expect(codes(() => send(s, { params: { ...DEFAULT_PARAMS, maxSubsidy: 800n } }))).toBe('SUBSIDY_EXCEEDS_CAP');
+  });
+
   it('isUsableLane: needs PUSD, no NFT, and value ≥ C + its own token dust', () => {
     const s = setup();
     const lock = lockingBytecodeOf(s.pool.tokenAddress);
@@ -88,6 +95,32 @@ describe('verifySignedTx (what the wallet returns)', () => {
   it('refuses a signature by a different key', () => {
     const s = setup(); const { req, hex } = signed(s, undefined, key('someone').priv);
     expect(code(() => verifySignedTx(hex, req.proposed, s.user.lock))).toBe('SIGNER');
+  });
+  const mutate = (hex: string, f: (t: TransactionCommon) => void) => {
+    const tx = decodeTransaction(hexToBin(hex)) as TransactionCommon; f(tx); return binToHex(encodeTransaction(tx));
+  };
+  it('refuses a changed input sequence, version, locktime, pool unlock or output count', () => {
+    const s = setup(); const { req, hex } = signed(s);
+    const v = (h: string) => code(() => verifySignedTx(h, req.proposed, s.user.lock));
+    expect(v(mutate(hex, (t) => { t.inputs[0] = { ...t.inputs[0]!, sequenceNumber: 0 }; }))).toBe('INPUTS');
+    expect(v(mutate(hex, (t) => { t.version = 1; }))).toBe('OUTPUTS');
+    expect(v(mutate(hex, (t) => { t.locktime = 900_000; }))).toBe('OUTPUTS');
+    expect(v(mutate(hex, (t) => { t.inputs[1] = { ...t.inputs[1]!, unlockingBytecode: Uint8Array.of(...t.inputs[1]!.unlockingBytecode, 0x51) }; }))).toBe('POOL_UNLOCK');
+    expect(v(mutate(hex, (t) => { t.outputs.pop(); }))).toBe('SHAPE');
+  });
+  it('refuses a garbage signature that carries the right public key and sighash byte (VM check)', () => {
+    const s = setup(); const { req, hex } = signed(s);
+    const forged = mutate(hex, (t) => {
+      const u = t.inputs[0]!.unlockingBytecode;
+      const sig = Uint8Array.of(...new Uint8Array(64).fill(7), 0x61);
+      t.inputs[0] = { ...t.inputs[0]!, unlockingBytecode: Uint8Array.of(65, ...sig, ...u.slice(1 + 65)) };
+    });
+    expect(code(() => verifySignedTx(forged, req.proposed, s.user.lock))).toBe('SCRIPT');
+  });
+  it('refuses a result whose fee falls below 1 sat/B (source values lower than proposed)', () => {
+    const s = setup(); const { req, hex } = signed(s);
+    const lowered = { ...req.proposed, sourceOutputs: req.proposed.sourceOutputs.map((o, i) => (i === 1 ? { ...o, valueSatoshis: o.valueSatoshis - 300n } : o)) };
+    expect(code(() => verifySignedTx(hex, lowered, s.user.lock))).toBe('FEE');
   });
   it('refuses a wallet that redirected an output', () => {
     const s = setup(); const { req, hex } = signed(s);
