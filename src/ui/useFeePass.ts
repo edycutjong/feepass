@@ -320,7 +320,8 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
         return;
       }
     }
-    store.clear(validRecord(loaded) ? loaded.txid : undefined);
+    if (validRecord(loaded)) store.clear(loaded.txid);
+    else if (loaded) store.clear(); // corrupt record: never a permanent block
     pending.value = null;
     notice.value = null;
     ticket.value = null;
