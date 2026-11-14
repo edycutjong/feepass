@@ -2,7 +2,7 @@
 <!-- STORYBOARD (dur 6s — must equal this file's single master dur)
   0-10%   steady state: the finished mark — sign plate, signal head with the green lamp, the ticket out of its slot (the poster)
   10-38%  trigger:      the ticket is taken and the lamp returns to the red closed mark; the next coin arrives from the left
-                        and is refused at the closed lane (the head shakes)                        data-story="beat-2"
+                        and stops at the closed lane (the head shakes)                             data-story="beat-2"
   38-74%  mechanism:    Lane 14 turns green; the ticket prints: fee paid in PUSD, no spendable BCH used, txid on the explorer.    data-story="beat-3"
                         (the lamp blinks amber while the wallet signs, turns green, the coin goes in, the ticket feeds out)
   74-94%  resolution:   the PAID bar lands on the ticket and the lamp breathes once; the paid state persists   data-story="beat-4"
