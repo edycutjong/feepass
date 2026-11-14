@@ -116,7 +116,7 @@ onBeforeUnmount(() => { io?.disconnect(); cancelAnimationFrame(raf); });
       <div class="rules">
         <article class="rule r5">
           <h3 class="display">Exactly {{ fee }} PUSD back</h3>
-          <p>An equality, never a minimum: no front end can charge you more or less through the pool.</p>
+          <p>The pool's side is an equality: the lane always gets back exactly {{ fee }} PUSD, never more, never less.</p>
           <div class="ledger" aria-label="The lane's PUSD before and after one send">
             <p><span class="k">in1</span><span>lane holds</span><b>n PUSD</b></p>
             <p><span class="k">out2</span><span>lane returns</span><b>n <span class="plus">+ {{ fee }}</span> PUSD</b></p>
@@ -153,7 +153,7 @@ require(tx.outputs.length == 3);</code></pre>
           <li><strong>Not free, not gasless.</strong> You pay {{ fee }} PUSD per send. That is the fee, and the pool's revenue.</li>
           <li><strong>Not the recipient's guard.</strong> The covenant does not check who gets paid. Your own signature covers the outputs, as far as your wallet shows them.</li>
           <li><strong>Not a mainnet receipt.</strong> The ticket above is a sample: its figures are computed offline from the compiled covenant.<span
-            v-if="poolUnfunded" data-testid="honest-pool"> The mainnet pool is not funded yet.</span></li>
+            v-if="poolUnfunded && !error" data-testid="honest-pool"> The mainnet pool is not funded yet.</span></li>
           <li><strong>Not bounded in total.</strong> The covenant caps what each send can take from a lane; many sends can still use lanes up, and the operator refills them.</li>
           <li><strong>Not verified on a named wallet yet.</strong> Wallet results are recorded on the <a href="/gate.html">wallet gate page</a> by a person holding the wallet.</li>
         </ul>
@@ -192,7 +192,8 @@ require(tx.outputs.length == 3);</code></pre>
       <details>
         <summary>Is this really mainnet?</summary>
         <p>Yes: mainnet is the only network it uses. The header shows the live block height, and every chain read uses a mainnet server.
-          <template v-if="poolUnfunded">The pool's lanes are not funded yet, so sends wait for the pool to open.</template>
+          <template v-if="error">The pool status could not be read just now.</template>
+          <template v-else-if="poolUnfunded">The pool's lanes are not funded yet, so sends wait for the pool to open.</template>
           <template v-else-if="board">{{ board.open }} of {{ lanesFunded }} lanes are open right now.</template>
           <template v-else>The pool status is still loading.</template></p>
       </details>
@@ -203,7 +204,8 @@ require(tx.outputs.length == 3);</code></pre>
 <style scoped>
 .front { overflow-x: clip; }
 .wide { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
-.hero { display: grid; grid-template-columns: minmax(0, .84fr) minmax(0, 1.16fr); grid-template-areas: "h booth" "plain booth" "copy booth";
+.hero { display: grid; grid-template-columns: minmax(0, .84fr) minmax(0, 1.16fr); grid-template-areas: ". booth" "h booth" "plain booth" "copy booth" ". booth";
+  grid-template-rows: 1fr auto auto auto 1fr;
   column-gap: 56px; row-gap: 22px; padding-top: 48px; padding-bottom: 48px; }
 .headline { grid-area: h; align-self: end; margin-top: 4px; font-size: clamp(38px, 4.3vw, 60px); line-height: 1; letter-spacing: 0; }
 .headline .l1, .headline .l2 { display: block; animation: rise .6s var(--ease) both; }
@@ -289,7 +291,7 @@ summary:hover { color: var(--sign); }
 details p { margin: 0 0 18px; max-width: 65ch; }
 
 @media (max-width: 960px) {
-  .hero { grid-template-columns: 1fr; grid-template-areas: "h" "plain" "booth" "copy"; row-gap: 20px; padding-top: 40px; }
+  .hero { grid-template-columns: 1fr; grid-template-areas: "h" "plain" "booth" "copy"; grid-template-rows: none; row-gap: 20px; padding-top: 40px; }
   .receipts .grid { grid-template-columns: 1fr 1fr; }
   .receipt:nth-child(3) { border-left: 0; padding-left: 0; }
   .receipt:nth-child(n+3) { border-top: 2px dashed var(--rule); }
@@ -299,7 +301,9 @@ details p { margin: 0 0 18px; max-width: 65ch; }
 }
 @media (max-width: 560px) {
   .wide { padding-left: 16px; padding-right: 16px; } /* sides only: the sections keep their own top padding */
+  .hero { grid-template-areas: "h" "plain" "copy" "booth"; } /* phones: the action and the pool state before the sample */
   .plain { font-size: 20px; }
+  .booth-slot { margin-top: 8px; }
   .sub { font-size: 17px; }
   .big { font-size: 19px; padding: 0 20px; }
   .num { font-size: 40px; }

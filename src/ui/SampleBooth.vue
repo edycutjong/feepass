@@ -34,7 +34,7 @@ const run = ref(0);
         <dl>
           <div><dt>Fee you paid</dt><dd><span data-testid="sample-fee">{{ fee }} PUSD</span><small>to the pool</small></dd></div>
           <div><dt>Miner fee</dt><dd><span data-testid="sample-miner">{{ std.minerFeeSats }} sats</span><small>paid by the lane</small></dd></div>
-          <div><dt>Spendable BCH</dt><dd>not used<small>a real ticket reads it from the chain</small></dd></div>
+          <div class="spend"><dt>Spendable BCH</dt><dd>not used<small>a real ticket reads it from the chain</small></dd></div>
           <div><dt>Size</dt><dd data-testid="sample-size">{{ std.signedSizeBytes }} bytes</dd></div>
         </dl>
         <p class="foot">Figures computed offline from the compiled covenant. Not a mainnet send.</p>
@@ -103,7 +103,7 @@ dd small { display: block; font: 400 13px/1.35 var(--font-body); color: var(--mu
   .paid { font-size: 36px; }
   dl div { grid-template-columns: 7.4em 1fr; }
   .tag { font-size: 13px; padding: 4px 7px; }
-  dd small { display: none; } /* keep the mobile ticket short; the desktop ticket carries the sub-lines */
+  .spend small { display: none; } /* keep the mobile ticket short; who-pays lines stay */
   .cap { font-size: 12px; }
 }
 </style>

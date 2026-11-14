@@ -71,6 +71,9 @@ describe('FrontPage', () => {
     expect(loading.text()).toContain('The ticket above is a sample');
     const failed = mount(FrontPage, { props: { ...props, board: null, error: 'timeout' } });
     expect(failed.get('[data-testid=front-status]').text()).toContain('Pool status unavailable');
+    const stale = mount(FrontPage, { props: { ...props, board: emptyBoard, error: 'timeout' } });
+    expect(stale.find('[data-testid=honest-pool]').exists()).toBe(false); // a failed refresh never re-asserts the old board
+    expect(stale.text()).toContain('could not be read just now');
   });
   it('a funded pool drops the not-open line and counts open lanes', () => {
     const utxo: SpendableUtxo = { txid: 'aa'.repeat(32), vout: 0, satoshis: 100_000n, lockingBytecode: '' } as SpendableUtxo;
