@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Wallet-compatibility gate (F6). Connect a wallet over WizardConnect, find a real PUSD coin on mainnet, ask the wallet
 // to sign shape (a) and shape (b), check what comes back, and produce a report to paste into the gate record.
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useWizardConnect, WizardConnectQRDialog } from '@paytaca/wizardconnect-vue';
 import { ElectrumNetworkProvider, type SpendableUtxo } from 'cashscript';
 import { deriveAddresses, type DerivedAddress } from '../core/hdAddresses';
@@ -13,6 +13,12 @@ import gate from '../config/gate.json';
 const wc = useWizardConnect({ dappName: 'FeePass wallet check', persistSession: false });
 const showQr = ref(false);
 const provider = new ElectrumNetworkProvider('mainnet');
+
+const height = ref<number | null>(null);
+const heightError = ref('');
+onMounted(async () => {
+  try { height.value = await provider.getBlockHeight(); } catch (e) { heightError.value = (e as Error).message; }
+});
 
 const addresses = ref<DerivedAddress[]>([]);
 const coins = ref<(SpendableUtxo & { owner: DerivedAddress })[]>([]);
@@ -107,6 +113,11 @@ async function copyReport() { await navigator.clipboard.writeText(report.value);
       <h1>Will your wallet sign a FeePass send?</h1>
       <p class="lede">Nothing here moves money. The wallet is asked to <strong>sign only</strong> (no broadcast); this page checks the
         signature and prints a report. Mainnet only.</p>
+      <p class="status" data-testid="mainnet-status">
+        <template v-if="height">BCH mainnet reachable · block {{ height.toLocaleString('en-US') }}</template>
+        <template v-else-if="heightError"><span class="err">Mainnet server unreachable: {{ heightError }}</span></template>
+        <template v-else>Connecting to BCH mainnet…</template>
+      </p>
     </header>
 
     <section class="card">
@@ -163,7 +174,8 @@ body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 sy
 .gate { max-width: 44rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
 .eyebrow { text-transform: uppercase; letter-spacing: .08em; font-size: .75rem; color: var(--sign); margin: 0; }
 h1 { font-size: 1.9rem; line-height: 1.15; margin: .3rem 0 .6rem; }
-.lede { margin: 0 0 1.5rem; }
+.lede { margin: 0 0 .5rem; }
+.status { font: .85rem/1.4 ui-monospace, monospace; color: #475569; margin: 0 0 1.5rem; }
 .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1rem; }
 h2 { font-size: 1.05rem; margin: 0 0 .5rem; }
 button { font: inherit; background: var(--sign); color: #fff; border: 0; border-radius: 8px; padding: .55rem 1rem; cursor: pointer; transition: transform .12s ease, opacity .12s ease; }
