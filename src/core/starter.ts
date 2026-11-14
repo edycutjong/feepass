@@ -69,6 +69,8 @@ export interface ClaimHistory {
   claimsToday: number;
   claimCount: number;
   historyTruncated: boolean;
+  /** The entries read reach back before 00:00 UTC today, so every claim made today was counted (always true untruncated). */
+  coversToday: boolean;
 }
 
 /**
@@ -137,7 +139,10 @@ export async function readClaimHistory(chain: FaucetChain, c: StarterConfig): Pr
     }
     if ((await timeOf(e.height)) >= dayStart) claimsToday++;
   }
-  return { claimedLocks, claimsToday, claimCount, historyTruncated: truncated };
+  // Truncated history is only a valid daily count if its oldest entry is from before today; otherwise a flood of later
+  // inbound payments could have pushed today's claims out of the window.
+  const coversToday = !truncated || (recent.length > 0 && (await timeOf(recent[0]!.height)) < dayStart);
+  return { claimedLocks, claimsToday, claimCount, historyTruncated: truncated, coversToday };
 }
 
 export interface FaucetCoins {
@@ -244,6 +249,7 @@ export async function claimStarter(chain: FaucetChain, c: StarterConfig, address
     const coins = await readFaucetCoins(chain, c);
     const hist = await readClaimHistory(chain, c);
     if (hist.claimedLocks.has(toLock)) throw new StarterError('ALREADY_CLAIMED', 'This address already claimed its starter PUSD.');
+    if (!hist.coversToday) throw new StarterError('DAILY_CAP', 'More faucet transactions arrived today than the claim check reads, so claims are paused until 00:00 UTC.');
     if (hist.claimsToday >= c.dailyCap) throw new StarterError('DAILY_CAP', `Today's starter PUSD is gone (${c.dailyCap} claims per UTC day). Try again after 00:00 UTC.`);
     claimsToday = hist.claimsToday;
     if (coins.units < c.claimUnits) throw new StarterError('FAUCET_EMPTY', 'The faucet has run out of starter PUSD.');

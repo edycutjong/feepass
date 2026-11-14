@@ -196,6 +196,30 @@ describe('starter claim', () => {
     await expect(claimStarter(chain, cfg, judge(2))).rejects.toMatchObject({ code: 'DAILY_CAP' });
   });
 
+  it('truncated history: claims pause if the 300 entries read all fall inside today; an old long history still counts today exactly', async () => {
+    const inbound = (chain: Chain, faucetLock: Uint8Array, n: number, confirmedOld: boolean) => {
+      for (let i = 0; i < n; i++) {
+        const txid = (confirmedOld ? 'a1' : 'b2') + i.toString(16).padStart(62, '0');
+        chain.funding.set(txid, fundingTxHex({ vout: 0 }, faucetLock)); // a payment TO the faucet: not a claim
+        chain.sent.push(txid);
+        if (confirmedOld) chain.blockTimes.set(txid, 1);
+      }
+    };
+    // flood after today's claims: today's claims fall out of the window, so the cap cannot be counted → refuse
+    const a = setup({ coins: [300n], cfg: { dailyCap: 3 } });
+    for (let i = 0; i < 3; i++) await claimStarter(a.chain, a.cfg, judge(40 + i));
+    inbound(a.chain, lockingBytecodeOf(a.faucet.tokenAddress), 300, false);
+    const sentBefore = a.chain.sent.length;
+    await expect(claimStarter(a.chain, a.cfg, judge(50))).rejects.toMatchObject({ code: 'DAILY_CAP' });
+    expect(a.chain.sent).toHaveLength(sentBefore);
+    // a long history that is OLD (confirmed days ago) then today's claims: the window reaches before today, cap is exact
+    const b = setup({ coins: [300n], cfg: { dailyCap: 2 } });
+    inbound(b.chain, lockingBytecodeOf(b.faucet.tokenAddress), 300, true);
+    await claimStarter(b.chain, b.cfg, judge(60));
+    await claimStarter(b.chain, b.cfg, judge(61));
+    await expect(claimStarter(b.chain, b.cfg, judge(62))).rejects.toMatchObject({ code: 'DAILY_CAP', message: expect.stringMatching(/2 claims per UTC day/) });
+  });
+
   it('a forged faucet spend (a P2SH coin whose redeem script just pushes the faucet pubkey) is VM-valid but is not a claim', async () => {
     const { chain, cfg, faucet } = setup({ cfg: { dailyCap: 1 } });
     const redeem = Uint8Array.of(0x21, ...faucet.pub); // OP_PUSHBYTES_33 <faucetPub>: leaves one truthy item, no signature

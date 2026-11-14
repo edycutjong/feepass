@@ -118,9 +118,10 @@ faucet address's own on-chain history (a claim is a tx that spends a faucet coin
 the operator's own spends to another address count too, while a consolidation back to the faucet does not; a judge returning
 PUSD to the faucet is not a claim). "Spends a faucet coin" is checked against the spent output's script, not the unlock
 bytes: a P2SH coin whose redeem script just pushes the faucet pubkey unlocks with the same bytes and no signature, and would
-otherwise fill the daily cap for a few thousand sats. The read covers the latest 300 history entries; beyond that, older
-claims drop out of the per-address check (fail-open, still bounded by the daily cap and the faucet balance) and the health
-route reports `historyTruncated`. There is no database, so the chain serializes concurrent claims: every claim
+otherwise fill the daily cap for a few thousand sats. The read covers the latest 300 history entries. Beyond that, older
+claims drop out of the per-address check (fail-open), but the daily cap stays exact only while those 300 entries reach back
+before 00:00 UTC; if they all fall inside today (a flood of inbound payments), claims pause until the next UTC day rather
+than count a cap they cannot see. The health route reports `historyTruncated`; a fresh faucet key restores claims sooner. There is no database, so the chain serializes concurrent claims: every claim
 spends the faucet's largest covering PUSD coin and its largest BCH coin (deterministic, ties by outpoint), so two claims built
 from the same history read conflict and only one is accepted; the loser re-reads the history (mempool included) and re-checks
 both limits before it rebuilds. Each attempt reads the coins first and the history second, so a claim that is already in the
