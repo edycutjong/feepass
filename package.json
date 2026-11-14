@@ -1,0 +1,39 @@
+{
+  "name": "feepass",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Send PUSD on Bitcoin Cash with no spendable BCH: a CashScript covenant pays the miner fee, you pay it in dollars.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "compile": "tsx scripts/compile.ts",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@bitauth/libauth": "^3.1.0-next.8",
+    "@paytaca/wizardconnect-vue": "^0.2.2",
+    "@wizardconnect/core": "^0.2.10",
+    "@wizardconnect/dapp": "^0.2.7",
+    "cashscript": "^0.14.0",
+    "vue": "^3.5.45"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@vitejs/plugin-vue": "^6.0.11",
+    "@wizardconnect/wallet": "^0.2.4",
+    "cashc": "^0.14.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0",
+    "vue-tsc": "^3.3.14"
+  }
+}
