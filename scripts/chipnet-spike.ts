@@ -87,8 +87,8 @@ async function main() {
   const lane = (await provider.getUtxos(pool.address)).find((u) => u.token?.category === category)!;
   const send = buildSponsoredSend({ pool, params: DEFAULT_PARAMS, categoryDisplay: category, userUtxo, userAddress: user.tokenAddress, lane, recipient: hot.tokenAddress, amount: 10n });
   const req = toWizardRequest(send, { pathName: 'receive', addressIndex: 0 });
-  const signed = signWcTransaction(req.transaction, new Map([[0, user.priv]]));
-  const v = verifySignedTx(signed, req.transaction, lockingBytecodeOf(user.tokenAddress));
+  const signed = signWcTransaction(req.wire, new Map([[0, user.priv]]));
+  const v = verifySignedTx(signed, req.proposed, lockingBytecodeOf(user.tokenAddress));
   const txid = await provider.sendRawTransaction(signed);
   if (txid !== v.txid) throw new Error(`txid mismatch ${txid} vs ${v.txid}`);
   log(txid, 'sponsored', v.sizeBytes, v.feeSats, send.poolSubsidySats, DEFAULT_PARAMS.feeTokens, String(userBch));
