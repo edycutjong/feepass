@@ -122,6 +122,10 @@ describe('verifySignedTx (what the wallet returns)', () => {
     const lowered = { ...req.proposed, sourceOutputs: req.proposed.sourceOutputs.map((o, i) => (i === 1 ? { ...o, valueSatoshis: o.valueSatoshis - 300n } : o)) };
     expect(code(() => verifySignedTx(hex, lowered, s.user.lock))).toBe('FEE');
   });
+  it('refuses bytes that do not decode as a transaction', () => {
+    const s = setup(); const { req } = signed(s);
+    expect(code(() => verifySignedTx('00ff', req.proposed, s.user.lock))).toBe('DECODE');
+  });
   it('refuses a wallet that redirected an output', () => {
     const s = setup(); const { req, hex } = signed(s);
     const tx = decodeTransaction(hexToBin(hex)) as TransactionCommon;

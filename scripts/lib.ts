@@ -52,7 +52,7 @@ export function spentSoFar(net: Net): bigint {
 
 export interface EvidenceRow {
   txid: string;
-  kind: 'split' | 'send' | 'starter' | 'sweep' | 'genesis';
+  kind: 'prep' | 'split' | 'send' | 'starter' | 'sweep' | 'genesis';
   sizeBytes: number;
   minerFeeSats: bigint;
   poolSubsidySats?: bigint;

@@ -43,8 +43,8 @@ const user = network === 'mock'
   : keyFromWif(readKeyFile('chipnet-user').WIF_TESTNET!);
 const provider: NetworkProvider = network === 'mock' ? new MockNetworkProvider() : new ElectrumNetworkProvider('chipnet');
 // Evidence rows use the shared 13-column schema (scripts/lib.ts); mock runs write nothing.
-const log = (txid: string, kind: 'split' | 'send' | 'genesis', size: number, fee: bigint, outflow: bigint, extra: { subsidy?: bigint; feeTokens?: bigint; before?: bigint; after?: bigint } = {}) => {
-  appendEvidence(network, { txid, kind, sizeBytes: size, minerFeeSats: fee, operatorOutflowSats: outflow, poolSubsidySats: extra.subsidy, pusdFeeUnits: extra.feeTokens, userBefore: extra.before, userAfter: extra.after });
+const log = (txid: string, kind: 'prep' | 'genesis' | 'send', size: number, fee: bigint, outflow: bigint, extra: { subsidy?: bigint; feeTokens?: bigint; before?: bigint; after?: bigint; lane?: string } = {}) => {
+  appendEvidence(network, { txid, kind, sizeBytes: size, minerFeeSats: fee, operatorOutflowSats: outflow, poolSubsidySats: extra.subsidy, pusdFeeUnits: extra.feeTokens, userBefore: extra.before, userAfter: extra.after, laneOutpoint: extra.lane });
   console.log(`${kind.padEnd(10)} ${txid} ${size} B fee ${fee}`);
 };
 
@@ -61,7 +61,7 @@ async function main() {
     const b = new TransactionBuilder({ provider }).addInputs(funds, signer.unlockP2PKH())
       .addOutput({ to: hot.address, amount: total - 500n });
     const tx = await b.send();
-    log(tx.txid, 'split', tx.hex.length / 2, 500n, 500n);
+    log(tx.txid, 'prep', tx.hex.length / 2, 500n, 500n);
     genesisCoin = (await provider.getUtxos(hot.address)).find((u) => u.txid === tx.txid && u.vout === 0)!;
   }
 
@@ -76,7 +76,7 @@ async function main() {
     .addOutput({ to: hot.tokenAddress, amount: 1_000n, token: { category, amount: SUPPLY - 1n - USER_UNITS } })
     .addOutput({ to: hot.address, amount: change })
     .send();
-  log(g.txid, 'genesis', g.hex.length / 2, fee, fee + LANE_SATS + USER_SATS);
+  log(g.txid, 'genesis', g.hex.length / 2, fee, fee + LANE_SATS + USER_SATS, { lane: `${g.txid}:0` });
 
   // 3. the sponsored send, from a wallet whose only coin is a token coin
   const userCoins = await provider.getUtxos(user.address);
