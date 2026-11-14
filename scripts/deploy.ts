@@ -1,7 +1,7 @@
 // "Deploys" the pool: a P2SH32 covenant needs no deploy tx, so this derives its address from the constructor args,
 // asserts the economic invariants, and writes src/config/<network>.json for the app.
 // Usage: tsx scripts/deploy.ts --network mock|chipnet|mainnet --bch-usd <price> [--category <display hex>] [--authorized-cap <bch>]
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { binToHex } from '@bitauth/libauth';
 import { MockNetworkProvider, randomUtxo } from 'cashscript';
@@ -9,6 +9,8 @@ import { poolContract } from '../src/core/pool';
 import { buildSponsoredSend } from '../src/core/sponsoredSend';
 import { DEFAULT_PARAMS, PUSD_CATEGORY_DISPLAY, PUSD_DECIMALS, feeCoversSubsidy } from '../src/core/params';
 import { arg, hotWallet, network, provider, requireCap } from './lib';
+import { mergeDeployedConfig } from './deploy-config';
+import { parseConfig } from '../src/core/config';
 
 const net = network();
 requireCap(net, 0n);
@@ -44,25 +46,20 @@ for (const [name, ok] of checks) console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}`)
 if (checks.some(([, ok]) => !ok)) process.exit(1);
 
 const artifactBytes = readFileSync(new URL('../src/contracts/FeePassPool.artifact.json', import.meta.url));
-const config = {
+const configUrl = new URL(`../src/config/${net}.json`, import.meta.url);
+const existing = existsSync(configUrl) ? (JSON.parse(readFileSync(configUrl, 'utf8')) as Record<string, unknown>) : null;
+// Merge, never replace: lanes, explorerTx, demoRecipient (the faucet), repoUrl and payoutAddress are operator-set and kept.
+const config = mergeDeployedConfig(existing, {
   network: net,
   contractAddress: pool.address,
   tokenAddress: pool.tokenAddress,
   pusdCategory: category,
   pusdDecimals: PUSD_DECIMALS,
-  constructor: {
-    ownerPk: binToHex(hot.pub),
-    pusdCategory: category,
-    feeTokens: Number(p.feeTokens),
-    maxSubsidy: Number(p.maxSubsidy),
-    maxTopUp: Number(p.maxTopUp),
-  },
-  lanes: 0,
+  constructorArgs: { ownerPk: binToHex(hot.pub), feeTokens: p.feeTokens, maxSubsidy: p.maxSubsidy, maxTopUp: p.maxTopUp },
   artifactSha256: createHash('sha256').update(artifactBytes).digest('hex'),
-  demoRecipient: hot.tokenAddress,
-  demoAmountUnits: 10,
   economicsCheckedAtBchUsd: bchUsd,
-};
+});
+if (net === 'mainnet') parseConfig(config as Parameters<typeof parseConfig>[0]); // the app's own parser must accept it, or nothing is written
 if (net === 'mock') console.log(JSON.stringify(config, null, 2));
-else writeFileSync(new URL(`../src/config/${net}.json`, import.meta.url), JSON.stringify(config, null, 2) + '\n');
+else writeFileSync(configUrl, JSON.stringify(config, null, 2) + '\n');
 console.log(`pool ${pool.tokenAddress}`);
