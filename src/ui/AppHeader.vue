@@ -28,7 +28,8 @@ defineEmits<{ connect: []; disconnect: [] }>();
 <style scoped>
 .hdr { background: var(--sign); color: var(--sign-ink); box-shadow: inset 0 0 0 3px var(--sign), inset 0 0 0 5px rgba(255,255,255,.9); padding: 10px 0 8px; }
 .bar { display: flex; align-items: center; gap: 14px; min-height: 56px; }
-.brand { color: var(--sign-ink); text-decoration: none; font-size: 32px; letter-spacing: .03em; }
+.brand { color: var(--sign-ink); text-decoration: none; font-size: 32px; letter-spacing: .03em; min-height: 44px; display: inline-flex; align-items: center; transition: letter-spacing .14s var(--ease), opacity .14s var(--ease); }
+.brand:hover { letter-spacing: .06em; opacity: .85; }
 .net { margin-left: auto; font-size: 13px; letter-spacing: .06em; opacity: .92; white-space: nowrap; }
 .net.off { color: var(--caution); }
 .connect { background: var(--sign-ink); color: var(--sign); border-color: var(--sign-ink); box-shadow: 0 2px 0 var(--housing); }
