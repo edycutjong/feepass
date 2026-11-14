@@ -1,6 +1,7 @@
 // The serverless function's routing, validation and error mapping, offline.
 import { beforeEach, describe, expect, it } from 'vitest';
 import { MockNetworkProvider, randomUtxo } from 'cashscript';
+import { FundedMock } from './helpers';
 import { hash160, secp256k1, sha256, utf8ToBin, encodeCashAddress } from '@bitauth/libauth';
 import { handle, IpLimiter, resetHealthCache, type ApiDeps } from '../src/server/feepassApi';
 import { STARTER_DEFAULTS, type FaucetChain } from '../src/core/starter';
@@ -12,7 +13,7 @@ const key = (s: string) => {
   const pkh = hash160(pub);
   return { priv, pub, address: encodeCashAddress({ prefix: 'bitcoincash', type: 'p2pkh', payload: pkh }).address, tokenAddress: encodeCashAddress({ prefix: 'bitcoincash', type: 'p2pkhWithTokens', payload: pkh }).address };
 };
-class Chain extends MockNetworkProvider {
+class Chain extends FundedMock {
   sent: string[] = [];
   constructor() { super(); (this as any).network = 'mainnet'; }
   async sendRawTransaction(h: string) { const t = await super.sendRawTransaction(h); this.sent.push(t); return t; }

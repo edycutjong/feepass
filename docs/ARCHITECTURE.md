@@ -109,7 +109,11 @@ A judge whose wallet holds no PUSD cannot make the required mainnet send, so one
 
 Guarantees are stated at their real strength. **One claim per receiving address and 3 claims per UTC day**, both read from the
 faucet address's own on-chain history (a claim is any tx that spends a faucet coin, so the operator's own manual spends from the faucet key count too; a judge
-returning PUSD to the faucet is not a claim). There is no database, so the chain serializes concurrent claims: every claim
+returning PUSD to the faucet is not a claim). "Spends a faucet coin" is checked against the spent output's script, not the unlock
+bytes: a P2SH coin whose redeem script just pushes the faucet pubkey unlocks with the same bytes and no signature, and would
+otherwise fill the daily cap for a few thousand sats. The read covers the latest 300 history entries; beyond that, older
+claims drop out of the per-address check (fail-open, still bounded by the daily cap and the faucet balance) and the health
+route reports `historyTruncated`. There is no database, so the chain serializes concurrent claims: every claim
 spends the faucet's largest covering PUSD coin and its largest BCH coin (deterministic, ties by outpoint), so two claims built
 from the same history read conflict and only one is accepted; the loser re-reads the history (mempool included) and re-checks
 both limits before it rebuilds (`test/starter.test.ts`, the two "race" cases). What remains is the seconds between a broadcast

@@ -58,11 +58,11 @@ const HISTORY_FETCH_LIMIT = 300;
 /** Blocks to look back when fetching header times for the UTC-day cap: > 1 day even when blocks are slow. */
 const DAY_LOOKBACK_BLOCKS = 300;
 
-/** Spent-coin test without a prevout lookup: a P2PKH unlock ends with the signer's pubkey push. */
-function spendsFaucetCoin(tx: Transaction, pubHex: string): boolean {
-  return tx.inputs.some((i) => binToHex(i.unlockingBytecode).endsWith('21' + pubHex));
+/** Cheap pre-filter only: the input's unlock ends with a push of the faucet pubkey (what a faucet P2PKH spend looks like).
+ *  It is NOT proof: a P2SH coin whose redeem script is `<faucetPub>` unlocks with the same suffix and no faucet signature. */
+function looksLikeFaucetSpend(unlock: Uint8Array, pubHex: string): boolean {
+  return binToHex(unlock).endsWith('21' + pubHex);
 }
-
 export interface ClaimHistory {
   /** Receiving locking bytecodes (hex) of every earlier claim. */
   claimedLocks: Set<string>;
@@ -95,24 +95,45 @@ export async function readClaimHistory(chain: FaucetChain, c: StarterConfig): Pr
     return timeCache.get(height)!;
   };
 
+  // 1. every history tx, decoded once (the prevout check below reuses them)
+  const txs = new Map<string, Transaction>();
+  const limit = 6;
+  const fetchTx = async (txid: string): Promise<Transaction> => {
+    const raw = await chain.getRawTransaction(txid).catch(() => undefined);
+    const tx = raw ? decodeTransaction(hexToBin(raw)) : 'unreadable';
+    if (typeof tx === 'string') throw new StarterError('CHAIN', 'Could not read the faucet history.');
+    return tx;
+  };
+  for (let i = 0; i < recent.length; i += limit) {
+    await Promise.all(recent.slice(i, i + limit).map(async (e) => { txs.set(e.txid, await fetchTx(e.txid)); }));
+  }
+  // 2. a claim is a tx that really spends a faucet coin: the prevout an input names must be a faucet output. The prevout
+  //    tx is usually in the history already (it paid the faucet); otherwise it is fetched once.
+  const prevCache = new Map<string, Transaction>();
+  const spendsFaucetCoin = async (tx: Transaction): Promise<boolean> => {
+    for (const input of tx.inputs) {
+      if (!looksLikeFaucetSpend(input.unlockingBytecode, pubHex)) continue;
+      const prevTxid = binToHex(input.outpointTransactionHash); // libauth: display order, same as a txid
+      let prev = txs.get(prevTxid) ?? prevCache.get(prevTxid);
+      if (!prev) { prev = await fetchTx(prevTxid); prevCache.set(prevTxid, prev); }
+      const out = prev.outputs[input.outpointIndex];
+      if (out && binToHex(out.lockingBytecode) === faucetLock) return true;
+    }
+    return false;
+  };
+
   const claimedLocks = new Set<string>();
   let claimsToday = 0;
   let claimCount = 0;
-  const limit = 6;
-  for (let i = 0; i < recent.length; i += limit) {
-    await Promise.all(
-      recent.slice(i, i + limit).map(async (e) => {
-        const raw = await chain.getRawTransaction(e.txid).catch(() => { throw new StarterError('CHAIN', 'Could not read the faucet history.'); });
-        const tx = decodeTransaction(hexToBin(raw));
-        if (typeof tx === 'string' || !spendsFaucetCoin(tx, pubHex)) return;
-        claimCount++;
-        for (const o of tx.outputs) {
-          const lock = binToHex(o.lockingBytecode);
-          if (lock !== faucetLock && o.token) claimedLocks.add(lock);
-        }
-        if ((await timeOf(e.height)) >= dayStart) claimsToday++;
-      }),
-    );
+  for (const e of recent) {
+    const tx = txs.get(e.txid)!;
+    if (!(await spendsFaucetCoin(tx))) continue;
+    claimCount++;
+    for (const o of tx.outputs) {
+      const lock = binToHex(o.lockingBytecode);
+      if (lock !== faucetLock && o.token) claimedLocks.add(lock);
+    }
+    if ((await timeOf(e.height)) >= dayStart) claimsToday++;
   }
   return { claimedLocks, claimsToday, claimCount, historyTruncated: truncated };
 }

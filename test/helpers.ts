@@ -1,5 +1,5 @@
-import { encodeCashAddress, hash160, secp256k1, sha256, utf8ToBin, binToHex } from '@bitauth/libauth';
-import { MockNetworkProvider, randomUtxo, type SpendableUtxo, type TokenDetails } from 'cashscript';
+import { encodeCashAddress, encodeTransaction, hash160, hexToBin, secp256k1, sha256, utf8ToBin, binToHex } from '@bitauth/libauth';
+import { MockNetworkProvider, randomUtxo, type SpendableUtxo, type TokenDetails, type Utxo } from 'cashscript';
 import { poolContract } from '../src/core/pool';
 import { DEFAULT_PARAMS, PUSD_CATEGORY_DISPLAY, type PoolParams } from '../src/core/params';
 import { lockingBytecodeOf } from '../src/core/dust';
@@ -31,4 +31,30 @@ export function setup(params: PoolParams = DEFAULT_PARAMS) {
   const addUserCoin = (units: bigint, sats = 1000n, token: TokenDetails | null = pusd(units)): SpendableUtxo =>
     provider.addUtxo(user.tokenAddress, randomUtxo({ satoshis: sats, token: token ?? undefined }));
   return { provider, owner, user, payee, pool, params, addLane, addUserCoin };
+}
+
+/** A stand-in for the tx that created `utxo`: it pays `lock` at `utxo.vout`, so prevout checks can read it from a mock. */
+export function fundingTxHex(utxo: { vout: number }, lock: Uint8Array): string {
+  return binToHex(encodeTransaction({
+    version: 2,
+    locktime: 0,
+    inputs: [{ outpointIndex: 0, outpointTransactionHash: new Uint8Array(32), sequenceNumber: 0, unlockingBytecode: new Uint8Array() }],
+    outputs: Array.from({ length: utxo.vout + 1 }, (_, k) => ({ lockingBytecode: k === utxo.vout ? lock : Uint8Array.of(0x6a), valueSatoshis: 0n })),
+  }));
+}
+
+/** MockNetworkProvider that also serves a funding tx for every coin added with addUtxo (the faucet's prevout check). */
+export class FundedMock extends MockNetworkProvider {
+  funding = new Map<string, string>();
+  addUtxo(addressOrLockingBytecode: string, utxo: Utxo): SpendableUtxo {
+    const added = super.addUtxo(addressOrLockingBytecode, utxo);
+    const lock = /^[0-9a-f]+$/i.test(addressOrLockingBytecode) ? hexToBin(addressOrLockingBytecode) : lockingBytecodeOf(addressOrLockingBytecode);
+    this.funding.set(added.txid, fundingTxHex(added, lock));
+    return added;
+  }
+  async getRawTransaction(txid: string): Promise<string> {
+    // a real (broadcast) tx first: the mock's own broadcast path also calls addUtxo for the outputs it creates
+    const real = await super.getRawTransaction(txid).catch(() => undefined);
+    return (real ?? this.funding.get(txid)) as string;
+  }
 }

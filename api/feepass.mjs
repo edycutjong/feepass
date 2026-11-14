@@ -20272,8 +20272,8 @@ var StarterError = class extends Error {
 var STARTER_DEFAULTS = { claimUnits: 25n, dailyCap: 3, starterSats: 1400n };
 var HISTORY_FETCH_LIMIT = 300;
 var DAY_LOOKBACK_BLOCKS = 300;
-function spendsFaucetCoin(tx, pubHex) {
-  return tx.inputs.some((i2) => binToHex(i2.unlockingBytecode).endsWith("21" + pubHex));
+function looksLikeFaucetSpend(unlock, pubHex) {
+  return binToHex(unlock).endsWith("21" + pubHex);
 }
 async function readClaimHistory(chain, c) {
   const nowMs = (c.now ?? Date.now)();
@@ -20297,26 +20297,46 @@ async function readClaimHistory(chain, c) {
     }));
     return timeCache.get(height);
   };
+  const txs = /* @__PURE__ */ new Map();
+  const limit = 6;
+  const fetchTx = async (txid) => {
+    const raw = await chain.getRawTransaction(txid).catch(() => void 0);
+    const tx = raw ? decodeTransaction(hexToBin(raw)) : "unreadable";
+    if (typeof tx === "string") throw new StarterError("CHAIN", "Could not read the faucet history.");
+    return tx;
+  };
+  for (let i2 = 0; i2 < recent.length; i2 += limit) {
+    await Promise.all(recent.slice(i2, i2 + limit).map(async (e) => {
+      txs.set(e.txid, await fetchTx(e.txid));
+    }));
+  }
+  const prevCache = /* @__PURE__ */ new Map();
+  const spendsFaucetCoin = async (tx) => {
+    for (const input of tx.inputs) {
+      if (!looksLikeFaucetSpend(input.unlockingBytecode, pubHex)) continue;
+      const prevTxid = binToHex(input.outpointTransactionHash);
+      let prev = txs.get(prevTxid) ?? prevCache.get(prevTxid);
+      if (!prev) {
+        prev = await fetchTx(prevTxid);
+        prevCache.set(prevTxid, prev);
+      }
+      const out = prev.outputs[input.outpointIndex];
+      if (out && binToHex(out.lockingBytecode) === faucetLock) return true;
+    }
+    return false;
+  };
   const claimedLocks = /* @__PURE__ */ new Set();
   let claimsToday = 0;
   let claimCount = 0;
-  const limit = 6;
-  for (let i2 = 0; i2 < recent.length; i2 += limit) {
-    await Promise.all(
-      recent.slice(i2, i2 + limit).map(async (e) => {
-        const raw = await chain.getRawTransaction(e.txid).catch(() => {
-          throw new StarterError("CHAIN", "Could not read the faucet history.");
-        });
-        const tx = decodeTransaction(hexToBin(raw));
-        if (typeof tx === "string" || !spendsFaucetCoin(tx, pubHex)) return;
-        claimCount++;
-        for (const o of tx.outputs) {
-          const lock = binToHex(o.lockingBytecode);
-          if (lock !== faucetLock && o.token) claimedLocks.add(lock);
-        }
-        if (await timeOf(e.height) >= dayStart) claimsToday++;
-      })
-    );
+  for (const e of recent) {
+    const tx = txs.get(e.txid);
+    if (!await spendsFaucetCoin(tx)) continue;
+    claimCount++;
+    for (const o of tx.outputs) {
+      const lock = binToHex(o.lockingBytecode);
+      if (lock !== faucetLock && o.token) claimedLocks.add(lock);
+    }
+    if (await timeOf(e.height) >= dayStart) claimsToday++;
   }
   return { claimedLocks, claimsToday, claimCount, historyTruncated: truncated };
 }

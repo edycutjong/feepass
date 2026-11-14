@@ -1,7 +1,8 @@
 // Starter PUSD faucet: every rule from the one serverless function, offline on a mainnet-answering mock chain.
 import { describe, expect, it } from 'vitest';
-import { binToHex, decodeTransaction, hexToBin, sha256, utf8ToBin, secp256k1, hash160, encodeCashAddress } from '@bitauth/libauth';
+import { binToHex, createVirtualMachineBch2026, decodeTransaction, encodeTransaction, hexToBin, sha256, utf8ToBin, secp256k1, hash160, encodeCashAddress } from '@bitauth/libauth';
 import { MockNetworkProvider, SignatureTemplate, TransactionBuilder, randomUtxo, type SpendableUtxo } from 'cashscript';
+import { FundedMock, fundingTxHex } from './helpers';
 import { claimStarter, pickClaimCoins, readFaucetCoins, STARTER_DEFAULTS, StarterError, type FaucetChain, type StarterConfig } from '../src/core/starter';
 import { PUSD_CATEGORY_DISPLAY as CAT } from '../src/core/params';
 import { dustFor, lockingBytecodeOf } from '../src/core/dust';
@@ -17,7 +18,7 @@ function mainnetKey(seed: string) {
   };
 }
 
-class Chain extends MockNetworkProvider implements FaucetChain {
+class Chain extends FundedMock implements FaucetChain {
   sent: string[] = [];
   failNext: string[] = [];
   /** Runs once, just before the next scripted failure: a competing claim that wins the race. */
@@ -168,6 +169,25 @@ describe('starter claim', () => {
     expect(pickClaimCoins([...tie].reverse(), 25n)[0]!.txid).toBe(pickClaimCoins(tie, 25n)[0]!.txid); // ties by outpoint, any order
     expect(pickClaimCoins([c(10n), c(10n), c(10n)], 25n)).toHaveLength(3);
     expect(pickClaimCoins([c(10n), c(10n)], 25n)).toEqual([]);
+  });
+
+  it('a forged faucet spend (a P2SH coin whose redeem script just pushes the faucet pubkey) is VM-valid but is not a claim', async () => {
+    const { chain, cfg, faucet } = setup({ cfg: { dailyCap: 1 } });
+    const redeem = Uint8Array.of(0x21, ...faucet.pub); // OP_PUSHBYTES_33 <faucetPub>: leaves one truthy item, no signature
+    const p2sh = Uint8Array.of(0xa9, 0x14, ...hash160(redeem), 0x87);
+    const prevTxid = 'cd'.repeat(32);
+    chain.funding.set(prevTxid, fundingTxHex({ vout: 0 }, p2sh));
+    const forgedTx = {
+      version: 2, locktime: 0,
+      inputs: [{ outpointTransactionHash: hexToBin(prevTxid), outpointIndex: 0, sequenceNumber: 0, unlockingBytecode: Uint8Array.of(0x22, ...redeem) }],
+      outputs: [{ lockingBytecode: lockingBytecodeOf(faucet.tokenAddress), valueSatoshis: 1000n }],
+    };
+    // the attack is real: the spend validates in the BCH 2026 VM (consensus) and its unlock ends with <21 faucetPub>
+    expect(createVirtualMachineBch2026(false).verify({ transaction: forgedTx, sourceOutputs: [{ lockingBytecode: p2sh, valueSatoshis: 2000n }] })).toBe(true);
+    const forgedTxid = 'ef'.repeat(32);
+    chain.funding.set(forgedTxid, binToHex(encodeTransaction(forgedTx)));
+    chain.sent.push(forgedTxid); // a donation to the faucet: it enters the faucet's history
+    await expect(claimStarter(chain, cfg, judge(1))).resolves.toBeTruthy(); // the forged tx did not take the one daily slot
   });
 
   it('race: a retry after a coin conflict re-reads the history, so a competing claim for the same address wins once', async () => {
