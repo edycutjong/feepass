@@ -73,6 +73,20 @@ describe('api/feepass', () => {
     expect([a.status, b.status].sort()).toEqual([200, 409]);
     expect(chain.sent).toHaveLength(1);
   });
+  it('a stalled claim answers 503 BUSY after its deadline and does not block the next claim in the instance', async () => {
+    const { deps, chain } = rig();
+    deps.claimTimeoutMs = 50;
+    const u0 = chain.getUtxos.bind(chain);
+    let stall = true;
+    chain.getUtxos = (a: string) => (stall ? new Promise(() => {}) : u0(a)); // the first claim's chain read never answers
+    const lim = new IpLimiter();
+    const first = await handle(post({ address: judge }, '3.3.3.3'), deps, lim);
+    expect(first.status).toBe(503);
+    expect(((await first.json()) as any).code).toBe('BUSY');
+    stall = false;
+    const second = await handle(post({ address: key('judge2').tokenAddress }, '4.4.4.4'), deps, lim);
+    expect(second.status).toBe(200);
+  });
   it('limiter overflow evicts the least recently seen IPs, not every window; x-real-ip is preferred', () => {
     const lim = new IpLimiter(3, 3_600_000);
     for (let i = 0; i < 3; i++) expect(lim.allow('9.9.9.9', 1)).toBe(true);
@@ -81,6 +95,12 @@ describe('api/feepass', () => {
     for (let i = 0; i < 2; i++) lim.allow('9.9.9.9', 4);
     for (let i = 0; i < 10; i++) lim.allow('11.0.' + i, 5);
     expect(lim.allow('9.9.9.9', 6)).toBe(false); // a recent key at its limit survives later inserts
+    // overflow again after a key reaches its limit: least-recent eviction keeps it blocked; a clear-all would forget it
+    const lim2 = new IpLimiter(3, 3_600_000);
+    for (let i = 0; i < 4999; i++) lim2.allow('12.0.' + i, 1);
+    for (let i = 0; i < 3; i++) lim2.allow('8.8.8.8', 2);
+    for (let i = 0; i < 10; i++) lim2.allow('13.0.' + i, 3); // pushes the map past 5,000
+    expect(lim2.allow('8.8.8.8', 4)).toBe(false);
     const req = new Request('https://x.test/', { headers: { 'x-real-ip': '7.7.7.7', 'x-forwarded-for': '6.6.6.6, 5.5.5.5' } });
     expect(clientIp(req)).toBe('7.7.7.7');
     expect(clientIp(new Request('https://x.test/', { headers: { 'x-forwarded-for': '6.6.6.6, 5.5.5.5' } }))).toBe('6.6.6.6');

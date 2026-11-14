@@ -10,7 +10,7 @@ import { deriveAddresses } from '../core/hdAddresses';
 import { buildBoard, type Board } from '../core/lanes';
 import { computeTicket, type Ticket } from '../core/receipt';
 import {
-  checkPending, FlowError, PENDING_TTL_MS, proposedFromPending, rebroadcast, RelayTimeoutError, runSend,
+  checkPending, coinUnspent, FlowError, PENDING_TTL_MS, proposedFromPending, rebroadcast, RelayTimeoutError, runSend,
   type CoinPin, type FlowErrorCode, type FlowEvent, type PendingSend, type PendingStore, type SigningLock,
 } from '../core/sendFlow';
 import type { SponsoredSend } from '../core/sponsoredSend';
@@ -226,7 +226,7 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
       const coins = candidateCoins(wallet.value.coins, amount, config.params);
       const out = await runSend(
         { pool, params: config.params, categoryDisplay: config.categoryDisplay, lanesShown: config.lanes, provider, sign, store, onEvent },
-        { coins, recipient: r.value, amount },
+        { coins, recipient: r.value, amount, walletAddresses: addresses().map((a) => a.address) },
       );
       store.clear(out.txid); // the send landed: the record has done its job, whatever the ticket below does
       activeLane.value = null;
@@ -277,6 +277,9 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
     pending.value = null;
   }
 
+  /** 'expired' is decided before the coin is looked at: pin only if its coin is still unspent (or the check fails). */
+  const pinWorthy = (rec: PendingSend) => coinUnspent(provider, rec.ownerAddress, rec.in0).catch(() => true);
+
   const validRecord = (r: PendingSend | null): r is PendingSend =>
     !!r && typeof r.txid === 'string' && /^[0-9a-f]{64}$/.test(r.txid) && typeof r.hex === 'string' && typeof r.in0 === 'string'
     && typeof r.ownerAddress === 'string' && typeof r.startedAt === 'number' && typeof r.proposed === 'string';
@@ -301,12 +304,12 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
             : 'A send from this browser is still pending. Re-send the same signed transaction, or start over with the same coin (any new version spends the same coin, so only one can ever confirm).',
         };
       } else {
-        if (st === 'expired') store.setPin(pinFrom(rec)); // the next send reuses this coin while the old version could confirm
+        if (st === 'expired' && (await pinWorthy(rec))) store.setPin(pinFrom(rec)); // the next send reuses this coin while the old version could confirm
         store.clear(rec.txid);
         notice.value = {
           code: 'DISCARDED',
           message: st === 'superseded'
-            ? 'A pending send from this browser never reached the network, and its PUSD coin has since been spent by another transaction. Nothing more was signed.'
+            ? 'A pending send from this browser was not seen on the network, and its PUSD coin has since been spent by another transaction. Nothing more was signed.'
             : `A pending send from this browser (older than ${PENDING_TTL_MS / 60000} minutes) was not seen on the network and was discarded. Your next send reuses the same coin, so at most one of them can ever confirm.`,
         };
       }
@@ -341,7 +344,7 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
     }
     if (st === 'seen') { ticketFromRecord(rec); notice.value = null; return; }
     if (st === 'offline') { notice.value = { code: 'BROADCAST_UNKNOWN', message: 'The server rejected the re-send and could not be asked about the first version. The signed bytes are kept; try again shortly.' }; return; }
-    if (st === 'unknown' || st === 'expired') store.setPin(pinFrom(rec)); // unresolved: the next send must reuse this coin
+    if (st === 'unknown' || (st === 'expired' && (await pinWorthy(rec)))) store.setPin(pinFrom(rec)); // unresolved: the next send must reuse this coin
     store.clear(rec.txid);
     pending.value = null;
     notice.value = st === 'superseded'
@@ -367,7 +370,7 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
     if (validRecord(loaded)) {
       // not seen on chain but its coin unspent (or unchecked, when expired): maybe live elsewhere, so the next send must reuse
       // its coin. 'superseded' = its coin was already spent by another tx, so that version can never confirm: no pin.
-      if (st === 'unknown' || st === 'expired') store.setPin(pinFrom(loaded));
+      if (st === 'unknown' || (st === 'expired' && (await pinWorthy(loaded)))) store.setPin(pinFrom(loaded));
       store.clear(loaded.txid);
     } else if (loaded) store.clear(); // corrupt record: never a permanent block
     pending.value = null;

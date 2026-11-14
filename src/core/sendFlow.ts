@@ -135,6 +135,8 @@ export interface SendRequest {
   coins: UserCoin[];
   recipient: string;
   amount: bigint;
+  /** Every address the connected wallet shared. A coin pin from another wallet is ignored (it cannot strand this one). */
+  walletAddresses?: string[];
 }
 
 export interface SendSuccess {
@@ -164,7 +166,7 @@ export function classifyBroadcastError(message: string): BroadcastFailure {
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-async function coinUnspent(p: FlowProvider, ownerAddress: string, outpoint: string): Promise<boolean> {
+export async function coinUnspent(p: FlowProvider, ownerAddress: string, outpoint: string): Promise<boolean> {
   const utxos = await p.getUtxos(ownerAddress);
   return utxos.some((u) => outpointOf(u) === outpoint);
 }
@@ -185,7 +187,8 @@ export async function runSend(d: FlowDeps, r: SendRequest): Promise<SendSuccess>
   if (held && now() - held.at < SIGNING_LOCK_MS) throw new FlowError('SEND_IN_PROGRESS', 'A wallet signature is already being requested from this browser (this or another tab). Finish or cancel it in the wallet first.');
   const lockId = `${now()}-${Math.random().toString(36).slice(2)}`;
   let coins = r.coins;
-  const pin = store.getPin();
+  const stored = store.getPin();
+  const pin = stored && (!r.walletAddresses || r.walletAddresses.includes(stored.ownerAddress)) ? stored : null;
   if (pin) {
     // an earlier signed version may still be live somewhere: positive evidence only (see CoinPin)
     const seen = await d.provider.getRawTransaction(pin.txid).then((x) => !!x, () => false);

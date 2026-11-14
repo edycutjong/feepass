@@ -20485,7 +20485,9 @@ async function readHealth(deps2) {
     claimsToday: hist.status === "fulfilled" ? hist.value.claimsToday : null,
     dailyCap: deps2.starter.dailyCap,
     lanesOpen: board.status === "fulfilled" && board.value ? board.value.open : null,
-    historyTruncated: hist.status === "fulfilled" ? hist.value.historyTruncated : null
+    historyTruncated: hist.status === "fulfilled" ? hist.value.historyTruncated : null,
+    /** True when today's claims cannot be counted (truncated history inside today): claims are refused until 00:00 UTC. */
+    claimsPaused: hist.status === "fulfilled" ? !hist.value.coversToday : null
   };
   return { body, cacheable: body.ok && hist.status === "fulfilled" };
 }
@@ -20521,7 +20523,14 @@ async function handle(req, deps2, limiter2) {
     if (typeof address !== "string") return json(400, { error: 'Send JSON: {"address": "bitcoincash:\u2026"}' });
     if (!limiter2.allow(clientIp(req), nowMs)) return json(429, { error: "Too many claims from this network just now. Try again later.", code: "IP_LIMIT" });
     try {
-      const run = claimQueue.then(() => claimStarter(deps2.chain, deps2.starter, address));
+      const deadline = deps2.claimTimeoutMs ?? 2e4;
+      const run = claimQueue.then(() => {
+        let t;
+        const timeout = new Promise((_2, rej) => {
+          t = setTimeout(() => rej(new StarterError("BUSY", "The network is slow to answer. Try again in a moment.")), deadline);
+        });
+        return Promise.race([claimStarter(deps2.chain, deps2.starter, address), timeout]).finally(() => clearTimeout(t));
+      });
       claimQueue = run.catch(() => void 0);
       const r = await run;
       return json(200, { txid: r.txid, units: Number(r.units), claimsToday: r.claimsToday, dailyCap: deps2.starter.dailyCap });

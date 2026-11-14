@@ -324,6 +324,27 @@ describe('useFeePass', () => {
     expect(fp.ticket.value).not.toBeNull();
   });
 
+  it('a pin from another wallet is ignored; a send that spends the pinned coin lifts the pin', async () => {
+    const store = memoryStore();
+    const fp = useFeePass({ store });
+    fund(fp);
+    await fp.resumePending();
+    await fp.scan();
+    const other = { in0: 'ab'.repeat(32) + ':0', ownerAddress: 'bitcoincash:qqnotthiswallet', txid: 'cd'.repeat(32), hex: '00',
+      laneOutpoint: 'ef'.repeat(32) + ':0', laneNumber: 1, excluded: [], startedAt: Date.now(), proposed: '{}' };
+    store.setPin({ ...other, pinnedAt: Date.now() });
+    await fp.send(config.demoRecipient, 10n); // the pinned coin belongs to a different wallet: this one is not stranded
+    expect(fp.ticket.value).not.toBeNull();
+    // same wallet: pin this wallet's remaining coin, then a send it can carry spends it and lifts the pin
+    await fp.scan();
+    const coin = fp.wallet.value!.coins[0]!;
+    store.setPin({ ...other, in0: `${coin.txid}:${coin.vout}`, ownerAddress: coin.owner.address, pinnedAt: Date.now() });
+    await fp.startOver();
+    await fp.send(config.demoRecipient, 10n);
+    expect(fp.ticket.value).not.toBeNull();
+    expect(store.getPin()).toBeNull();
+  });
+
   it('a re-send that fails on an expired record leaves a pin (the next send cannot pick another coin)', async () => {
     const store = memoryStore();
     const fp = useFeePass({ store });

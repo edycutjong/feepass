@@ -78,7 +78,7 @@ evidence/                       measured JSON/CSV the docs and the UI quote
 
 1. Read the user's PUSD coins (derived addresses) and the pool UTXOs from Fulcrum (mainnet only).
 2. Pick a coin that carries `amount + f + 1` units (the 1 unit is change, R8) and a **random open lane** (F2: several judges
-   clicking at once rarely collide). A lane is open while it holds at least `C` + its own token dust.
+   clicking at once: three picks over 20 open lanes share one 14.5% of the time; the loser re-signs on another lane). A lane is open while it holds at least `C` + its own token dust.
 3. Build the fixed shape. The covenant input is built with its unlocker; the user input is a placeholder.
 4. Send it to the wallet over WizardConnect for input 0 only.
 5. **Verify before broadcasting** (`verifySignedTx`): same inputs and outputs and token amounts as proposed, input 0 signed
@@ -88,10 +88,10 @@ evidence/                       measured JSON/CSV the docs and the UI quote
    payment can never both confirm.
 7. A pending-send record (localStorage, cross-tab lock, 30 min TTL) lets a reload resume: it asks the chain first, re-sends
    the same bytes if the network never saw them, never re-signs. "Status unknown" keeps the signed bytes. Starting over, an
-   expired record or a failed re-send leaves a coin pin (the whole record): the next send must spend that same coin, so a
+   expired record or an unresolved re-send (its coin still unspent) leaves a coin pin (the whole record): the next send must spend that same coin, so a
    version that was live on another server and the new one can never both confirm. It lifts only on positive evidence: the
-   old version is seen (its ticket is shown and nothing new is signed), a new send spends the coin, or the coin has been gone
-   for 10 minutes with the old version still unseen. A lane this server does not list is not evidence (propagation lag). The signing lock carries a
+   old version is seen (its ticket is shown and nothing new is signed), a new send spends the coin, or the pin is at least
+   10 minutes old and its coin is gone while the old version is still unseen. A pin from another wallet is ignored. A lane this server does not list is not evidence (propagation lag). The signing lock carries a
    per-request id, is re-checked right before the wallet prompt, and a tab only releases its own (localStorage has no
    compare-and-set, so this narrows the cross-tab window rather than closing it).
 8. The ticket re-reads the transaction: PUSD sent, fee paid, the actual pool subsidy (miner fee plus the top-up), the paid
@@ -121,7 +121,9 @@ bytes: a P2SH coin whose redeem script just pushes the faucet pubkey unlocks wit
 otherwise fill the daily cap for a few thousand sats. The read covers the latest 300 history entries. Beyond that, older
 claims drop out of the per-address check (fail-open), but the daily cap stays exact only while those 300 entries reach back
 before 00:00 UTC; if they all fall inside today (a flood of inbound payments), claims pause until the next UTC day rather
-than count a cap they cannot see. The health route reports `historyTruncated`; a fresh faucet key restores claims sooner. There is no database, so the chain serializes concurrent claims: every claim
+than count a cap they cannot see. The health route reports `historyTruncated` and `claimsPaused`; a fresh faucet key restores claims sooner. This is a
+deliberate trade: a flood of about 300 inbound transactions in one day (roughly 0.002 BCH of dust and fees) can pause
+claims for that day, but it cannot drain the faucet. There is no database, so the chain serializes concurrent claims: every claim
 spends the faucet's largest covering PUSD coin and its largest BCH coin (deterministic, ties by outpoint), so two claims built
 from the same history read conflict and only one is accepted; the loser re-reads the history (mempool included) and re-checks
 both limits before it rebuilds. Each attempt reads the coins first and the history second, so a claim that is already in the
