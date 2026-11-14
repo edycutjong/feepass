@@ -1,8 +1,9 @@
 // The two hard-coded transaction shapes the wallet-compatibility gate asks a wallet to sign.
 // (a) covenant input: the user's PUSD coin + one FeePassPool lane (contract sourceOutput, complete unlock).
 // (b) merchant input: the user's PUSD coin + a foreign P2PKH coin (the payee-funded fee variant).
-// When no mainnet lane / merchant coin exists yet, a SYNTHETIC outpoint stands in: the wallet can still be asked to
-// sign (sign-only pre-check), but that tx can never broadcast. The report says which one was used.
+// (a) uses the configured mainnet lane when `gate.lane` is set, otherwise a SYNTHETIC outpoint. (b) always uses a
+// SYNTHETIC merchant outpoint. A synthetic tx can be signed for the pre-check but can never broadcast. The report flags
+// which one was used.
 import { TransactionBuilder, placeholderP2PKHUnlocker, type NetworkProvider, type SpendableUtxo } from 'cashscript';
 import { poolContract } from '../core/pool';
 import { buildSponsoredSend } from '../core/sponsoredSend';
@@ -39,6 +40,7 @@ export function shapeB(provider: NetworkProvider, coin: SpendableUtxo, owner: { 
   merchant.lockingBytecode = Array.from(merchantLock, (b) => b.toString(16).padStart(2, '0')).join('');
   const cat = gate.categoryDisplay;
   const pay = { category: cat, amount: SEND_UNITS };
+  if (coin.token!.amount - SEND_UNITS < 1n) throw new Error('coin holds too little PUSD for shape (b)');
   const change = { category: cat, amount: coin.token!.amount - SEND_UNITS };
   const ownerLock = lockingBytecodeOf(owner.tokenAddress);
   const payDust = dustFor(merchantLock, pay);

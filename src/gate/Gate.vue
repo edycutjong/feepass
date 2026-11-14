@@ -25,7 +25,7 @@ const coins = ref<(SpendableUtxo & { owner: DerivedAddress })[]>([]);
 const scanning = ref(false);
 const scanError = ref('');
 const spendableBch = ref<bigint | null>(null);
-type Result = { shape: string; synthetic: boolean; outcome: 'signed-verified' | 'signed-rejected-by-check' | 'refused-by-wallet' | 'error'; detail: string; sighash?: string; txid?: string; at: string };
+type Result = { id: number; shape: string; synthetic: boolean; outcome: 'signed-verified' | 'signed-rejected-by-check' | 'refused-by-wallet' | 'error'; detail: string; sighash?: string; txid?: string; at: string };
 const results = ref<Result[]>([]);
 const busy = ref('');
 
@@ -64,29 +64,46 @@ async function scan() {
   }
 }
 
+let seq = 0;
+
+/** Use the first PUSD coin the builder can actually spend in this shape (largest first), so one unusable coin does not
+ *  end the human's signing session before the wallet is even asked. */
+function firstBuildable(which: 'a' | 'b') {
+  let lastError = 'No PUSD coin found';
+  for (const coin of coins.value) {
+    const owner = { tokenAddress: coin.owner.tokenAddress, pathName: coin.owner.pathName, addressIndex: coin.owner.addressIndex };
+    try {
+      return { coin, owner, shape: which === 'a' ? shapeA(provider, coin, owner) : shapeB(provider, coin, owner) };
+    } catch (e) {
+      lastError = (e as Error).message;
+    }
+  }
+  throw new Error(`None of your PUSD coins fits this shape: ${lastError}`);
+}
+
 async function run(which: 'a' | 'b') {
   const m = wc.manager.value;
-  const coin = coins.value[0];
-  if (!m || !coin) return;
+  if (!m || coins.value.length === 0) return;
   busy.value = which;
-  const owner = { tokenAddress: coin.owner.tokenAddress, pathName: coin.owner.pathName, addressIndex: coin.owner.addressIndex };
   let shape: ShapeRequest | undefined;
   const at = new Date().toISOString();
   try {
-    shape = which === 'a' ? shapeA(provider, coin, owner) : shapeB(provider, coin, owner);
+    const picked = firstBuildable(which);
+    shape = picked.shape;
+    const owner = picked.owner;
     const res = await m.signTransaction({ transaction: shape.request.wire as never, inputPaths: shape.request.inputPaths });
     if (res.error || !res.signedTransaction) {
-      results.value.unshift({ shape: shape.describe, synthetic: shape.synthetic, outcome: 'refused-by-wallet', detail: res.error ?? 'empty response', at });
+      results.value.unshift({ id: ++seq, shape: shape.describe, synthetic: shape.synthetic, outcome: 'refused-by-wallet', detail: res.error ?? 'empty response', at });
       return;
     }
     try {
       const v = verifySignedTx(res.signedTransaction, shape.request.proposed, lockingBytecodeOf(owner.tokenAddress));
-      results.value.unshift({ shape: shape.describe, synthetic: shape.synthetic, outcome: 'signed-verified', detail: `${v.sizeBytes} B, fee ${v.feeSats} sats`, sighash: '0x' + v.sighashType.toString(16), txid: v.txid, at });
+      results.value.unshift({ id: ++seq, shape: shape.describe, synthetic: shape.synthetic, outcome: 'signed-verified', detail: `${v.sizeBytes} B, fee ${v.feeSats} sats`, sighash: '0x' + v.sighashType.toString(16), txid: v.txid, at });
     } catch (e) {
-      results.value.unshift({ shape: shape.describe, synthetic: shape.synthetic, outcome: 'signed-rejected-by-check', detail: (e as Error).message, at });
+      results.value.unshift({ id: ++seq, shape: shape.describe, synthetic: shape.synthetic, outcome: 'signed-rejected-by-check', detail: (e as Error).message, at });
     }
   } catch (e) {
-    results.value.unshift({ shape: shape?.describe ?? `(${which})`, synthetic: shape?.synthetic ?? true, outcome: 'error', detail: (e as Error).message, at });
+    results.value.unshift({ id: ++seq, shape: shape?.describe ?? `(${which})`, synthetic: shape?.synthetic ?? true, outcome: 'error', detail: (e as Error).message, at });
   } finally {
     busy.value = '';
   }
@@ -149,7 +166,7 @@ async function copyReport() { await navigator.clipboard.writeText(report.value);
         <button type="button" :disabled="!!busy" @click="run('b')">{{ busy === 'b' ? 'Waiting for wallet…' : 'Shape (b): merchant input' }}</button>
       </div>
       <ol class="results">
-        <li v-for="r in results" :key="r.at" :class="r.outcome">
+        <li v-for="r in results" :key="r.id" :class="r.outcome">
           <strong>{{ r.outcome }}</strong> — {{ r.shape }}<span v-if="r.synthetic"> (pre-check)</span><br />
           <small>{{ r.detail }}<span v-if="r.sighash"> · sighash {{ r.sighash }}</span></small>
         </li>
