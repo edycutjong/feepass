@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="FeePass — a covenant pays the Bitcoin Cash network fee and you pay it back in PUSD. Lane 14 turns green; the ticket prints: fee paid in PUSD, no spendable BCH used, txid on the explorer.">
+<!-- STORYBOARD (dur 6s — must equal this file's single master dur)
+  0-10%   steady state: the finished mark — sign plate, signal head with the green lamp, the ticket out of its slot (the poster)
+  10-38%  trigger:      the ticket is taken and the lamp returns to the red closed mark; the next coin arrives from the left
+                        and is refused at the closed lane (the head shakes)                        data-story="beat-2"
+  38-74%  mechanism:    Lane 14 turns green; the ticket prints: fee paid in PUSD, no spendable BCH used, txid on the explorer.    data-story="beat-3"
+                        (the lamp blinks amber while the wallet signs, turns green, the coin goes in, the ticket feeds out)
+  74-94%  resolution:   the PAID bar lands on the ticket and the lamp breathes once; the paid state persists   data-story="beat-4"
+  94-100% breathe + seam: nothing moves; the frame equals 0%, so the restart cannot cut
+-->
+<defs><clipPath id="i-plate"><rect width="512" height="512" rx="88"/></clipPath><style>.pop{transform-box:fill-box;transform-origin:center;animation:i-pop 6s infinite}.shake{transform-box:fill-box;transform-origin:center;animation:i-shake 6s infinite}@keyframes i-pop{0%,17%{transform:scale(1)}18%,49.6%{transform:scale(.72)}53%{transform:scale(1.08);animation-timing-function:cubic-bezier(.2,1.4,.4,1)}57%,100%{transform:scale(1)}}@keyframes i-shake{0%,31%{transform:translateX(0)}32.2%{transform:translateX(9px)}33.4%{transform:translateX(-7px)}34.6%{transform:translateX(5px)}36%,100%{transform:translateX(0)}}@media (prefers-reduced-motion: reduce){*{animation:none !important}}</style></defs>
+<g clip-path="url(#i-plate)">
+<rect width="512" height="512" fill="#1F4F9A"/>
+<rect x="27" y="27" width="458" height="458" rx="64" fill="none" stroke="#FFFFFF" stroke-width="14"/>
+
+<!-- the coin: arrives from the left, is refused, then passes into the lane -->
+<g opacity="0" data-story="beat-2"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.18;0.2;0.53;0.57;1" dur="6s" repeatCount="indefinite"/>
+  <g><animateTransform attributeName="transform" type="translate" values="-60 202;-60 202;80 202;80 202;92 202;78 202;78 202;190 202;190 202" keyTimes="0;0.18;0.28;0.31;0.325;0.36;0.5;0.57;1" dur="6s" repeatCount="indefinite" calcMode="spline" keySplines="0 0 1 1;0.2 0.7 0.2 1;0 0 1 1;0.4 0 1 1;0 0.6 0.4 1;0 0 1 1;0.5 0 0.8 0.5;0 0 1 1"/>
+    <circle r="36" fill="#FBFBF7"/><circle r="26" fill="none" stroke="#16202B" stroke-width="4.5"/><path d="M0 -14V14" stroke="#16202B" stroke-width="6" stroke-linecap="round"/>
+  </g>
+</g>
+
+<!-- the ticket: taken at the start of the loop, printed again after the lamp turns green -->
+<g><animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 120;0 -132;0 -132;0 -96;0 -96;0 -54;0 -54;0 0;0 0" keyTimes="0;0.1;0.15;0.151;0.56;0.59;0.61;0.64;0.66;0.7;1" dur="6s" repeatCount="indefinite"/>
+  <animate attributeName="opacity" values="1;1;0;1;1" keyTimes="0;0.12;0.15;0.16;1" dur="6s" repeatCount="indefinite"/>
+  <path d="M176 320H336V440L326 454L316 440L306 454L296 440L286 454L276 440L266 454L256 440L246 454L236 440L226 454L216 440L206 454L196 440L186 454L176 440Z" fill="#FBFBF7"/>
+  <path d="M200 366H312" stroke="#16202B" stroke-width="12" stroke-opacity="1" pathLength="100" stroke-dasharray="100" fill="none" data-story="beat-3"><animate attributeName="stroke-dashoffset" values="0;0;100;100;0;0" keyTimes="0;0.15;0.151;0.59;0.64;1" dur="6s" repeatCount="indefinite"/></path><path d="M200 393H276" stroke="#16202B" stroke-width="12" stroke-opacity="0.5" pathLength="100" stroke-dasharray="100" fill="none" data-story="beat-3"><animate attributeName="stroke-dashoffset" values="0;0;100;100;0;0" keyTimes="0;0.15;0.151;0.64;0.69;1" dur="6s" repeatCount="indefinite"/></path>
+  <rect x="200" y="414" width="48" height="13" rx="2" fill="#1E9E5A"><animate attributeName="opacity" values="1;1;0;0;1;1" keyTimes="0;0.15;0.151;0.74;0.755;1" dur="6s" repeatCount="indefinite"/><animate attributeName="width" values="48;48;0;0;48;48" keyTimes="0;0.15;0.151;0.74;0.78;1" dur="6s" repeatCount="indefinite"/></rect>
+</g>
+
+<!-- the signal head -->
+<g class="shake">
+<rect x="126" y="70" width="260" height="264" rx="36" fill="#111418"/>
+<g opacity="0" data-story="beat-2"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.14;0.16;0.376;0.38;1" dur="6s" repeatCount="indefinite"/><polygon points="209.92,138 256,184.08 302.08,138 320,155.92 273.92,202 320,248.08 302.08,266 256,219.92 209.92,266 192,248.08 238.08,202 192,155.92" fill="#C8452C"/></g>
+<g opacity="0" data-story="beat-3"><animate attributeName="opacity" values="0;0;1;1;0;0;1;1;0;0" keyTimes="0;0.376;0.38;0.42;0.424;0.436;0.44;0.496;0.5;1" dur="6s" repeatCount="indefinite"/><polygon points="235,133 277,133 277,202 316,202 256,271 196,202 235,202" fill="#F2B301"/></g>
+<g><animate attributeName="opacity" values="1;1;0;0;1;1" keyTimes="0;0.14;0.16;0.496;0.504;1" dur="6s" repeatCount="indefinite"/>
+  <g class="pop"><rect x="150" y="94" width="212" height="216" rx="20" fill="#1E9E5A"><animate attributeName="fill" values="#1E9E5A;#1E9E5A;#2BBF73;#1E9E5A;#1E9E5A" keyTimes="0;0.82;0.87;0.93;1" dur="6s" repeatCount="indefinite"/></rect>
+  <polygon points="235,133 277,133 277,202 316,202 256,271 196,202 235,202" fill="#FFFFFF"/></g>
+</g>
+</g>
+</g>
+</svg>

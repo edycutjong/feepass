@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="FeePass — a covenant pays the Bitcoin Cash network fee, you pay it back in PUSD: the lane signal turns green and the toll ticket prints">
+  <!-- The mark: a lane-control signal head on a motorway-sign plate. The lamp is green (lane open, fee paid)
+       and the toll ticket hangs out of the slot under it. Each fill carries a hex attribute for plain renderers
+       and a token style with the same hex as fallback, so the mark follows the page's design tokens when it is inlined. -->
+  <defs>
+    <clipPath id="fp-plate"><rect width="512" height="512" rx="88"/></clipPath>
+  </defs>
+  <g clip-path="url(#fp-plate)">
+    <!-- sign plate + retroreflective inset border -->
+    <rect width="512" height="512" fill="#1F4F9A" style="fill:var(--sign, #1F4F9A)"/>
+    <rect x="27" y="27" width="458" height="458" rx="64" fill="none" stroke="#FFFFFF" stroke-width="14" style="stroke:var(--sign-ink, #FFFFFF)"/>
+    <!-- the ticket: thermal stock, torn foot, two printed lines and the PAID bar -->
+    <path d="M176 320H336V440L326 454L316 440L306 454L296 440L286 454L276 440L266 454L256 440L246 454L236 440L226 454L216 440L206 454L196 440L186 454L176 440Z" fill="#FBFBF7" style="fill:var(--paper, #FBFBF7)"/>
+    <rect x="200" y="360" width="112" height="12" rx="2" fill="#16202B" style="fill:var(--ink, #16202B)"/>
+    <rect x="200" y="387" width="76" height="12" rx="2" fill="#16202B" opacity="0.5" style="fill:var(--ink, #16202B)"/>
+    <rect x="200" y="414" width="48" height="13" rx="2" fill="#1E9E5A" style="fill:var(--after, #1E9E5A)"/>
+    <!-- signal head: black housing, green lamp, white arrow -->
+    <rect x="126" y="70" width="260" height="264" rx="36" fill="#111418" style="fill:var(--housing, #111418)"/>
+    <rect x="150" y="94" width="212" height="216" rx="20" fill="#1E9E5A" style="fill:var(--after, #1E9E5A)"/>
+    <polygon points="235,133 277,133 277,202 316,202 256,271 196,202 235,202" fill="#FFFFFF" style="fill:var(--sign-ink, #FFFFFF)"/>
+  </g>
+</svg>
