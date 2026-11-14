@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{ repoUrl: string }>();
+defineProps<{ repoUrl: string; payout: string }>();
 </script>
 
 <template>
@@ -13,6 +13,7 @@ defineProps<{ repoUrl: string }>();
         <a href="/pool">Pool</a>
         <a href="/gate.html">Wallet gate</a>
       </nav>
+      <p class="addr" title="CashTokens address for BCH BLAZE Community Choice: send EMBER2026 tokens here to vote"><span class="addr-l">Community Choice · send EMBER2026 votes to</span> <span class="data">{{ payout }}</span></p>
       <p class="note">Built for BCH BLAZE 2026 · MIT licence · Bitcoin Cash mainnet</p>
     </div>
   </footer>
@@ -27,6 +28,9 @@ defineProps<{ repoUrl: string }>();
 .links { display: flex; flex-wrap: wrap; gap: 4px 22px; justify-content: flex-end; }
 .links a { color: var(--sign-ink); font-size: 16px; min-height: 44px; display: inline-flex; align-items: center; text-underline-offset: 3px; }
 .links a:hover { text-decoration-thickness: 2px; opacity: .85; }
+.addr { grid-column: 1 / -1; margin: 10px 0 0; overflow-wrap: anywhere; }
+.addr-l { font: 600 14px/1.4 var(--font-body); color: #B7CBEC; margin-right: 6px; }
+.addr .data { font-size: 14px; }
 .note { grid-column: 1 / -1; margin: 6px 0 0; font-size: 14px; color: #B7CBEC; }
 @media (max-width: 560px) { .inner { grid-template-columns: 1fr; padding: 24px 16px; } .links { justify-content: flex-start; } }
 </style>

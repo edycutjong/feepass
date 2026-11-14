@@ -104,10 +104,10 @@ h2.display { font-size: 104px; margin-bottom: 44px; }
 .chip span { font: 800 26px/1 var(--font-display); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 
 /* 3 · story */
-.s3.on { display: grid; grid-template-columns: minmax(0, 1fr) 660px; gap: 90px; align-items: center; }
+.s3.on { display: grid; grid-template-columns: minmax(0, 1fr) 660px; gap: 90px; align-items: center; align-content: center; padding-bottom: 150px; }
 .s3 p.story { font-size: 56px; line-height: 1.25; margin: 0 0 34px; max-width: 18em; }
 .s3 p.story strong { font-weight: 600; }
-.ba { display: grid; gap: 34px; margin-top: 60px; }
+.ba { display: grid; gap: 34px; margin-top: 0; }
 .ba .plate { display: grid; grid-template-columns: 150px 1fr; gap: 34px; align-items: center; padding: 36px 38px; }
 .ba .lamp { width: 150px; height: 150px; font-size: 88px; }
 .ba p { margin: 0; font: 800 52px/1.02 var(--font-display); text-transform: uppercase; }
@@ -123,6 +123,7 @@ h2.display { font-size: 104px; margin-bottom: 44px; }
 .ben ul li { border: 0; padding: 0 0 0 30px; font-size: 34px; color: var(--muted); }
 .ben ul li::before { content: '–'; background: none; color: var(--muted); width: auto; height: auto; font: 400 34px/1.45 var(--font-body); top: 0; }
 ul.ben { margin: 0; padding: 0; }
+.ben > li:last-child:nth-child(odd) { grid-column: 1 / -1; }
 
 /* 5 · BCH usage */
 .s5.on { display: grid; grid-template-columns: 640px 1fr; grid-template-rows: auto 1fr; gap: 50px 70px; align-items: center; }
@@ -142,7 +143,8 @@ ul.ben { margin: 0; padding: 0; }
 
 /* 6 · vision */
 .road { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
-.road .plate { padding: 38px 40px 40px; min-height: 400px; }
+.s4.on, .s6.on { display: flex; flex-direction: column; justify-content: center; padding-bottom: 150px; }
+.road .plate { padding: 40px 40px 44px; min-height: 300px; }
 .road h3 { font: 800 62px/1 var(--font-display); text-transform: uppercase; margin: 0 0 26px; }
 .road p { margin: 0; font-size: 36px; color: var(--sign-dim); }
 .road .now { background: var(--housing); box-shadow: 0 24px 50px rgba(17, 20, 24, .18); }
@@ -184,6 +186,7 @@ body.show-notes .notes-panel { display: block; }
   .stage { position: static; transform: none !important; width: 1920px; height: auto; }
   .slide { position: relative; display: block !important; width: 1920px; height: 1080px; break-after: page; }
   .s1, .s2, .s3, .s5, .s7 { display: grid !important; }
+  .s4, .s6 { display: flex !important; }
   .ctrl, .bar, .notes-panel { display: none !important; }
   .anim { animation: none !important; }
 }
@@ -247,23 +250,23 @@ body.show-notes .notes-panel { display: block; }
   <!-- 3 · The Story -->
   <section class="slide s3" data-title="The story" aria-label="Slide 3: The story">
     <div>
-      <h2 class="display anim">The story</h2>
+      <h2 class="display anim">The story of FeePass</h2>
       <p class="story anim d2">Paid in <strong>PUSD</strong>, a new user presses send.</p>
       <p class="story anim d3">The fee is due in <strong>BCH</strong>, and they hold none they can spend.</p>
     </div>
     <div class="ba">
       <div class="plate anim d2"><span class="lamp no">✕</span><p>Fee due in BCH<small>no spendable BCH</small></p></div>
-      <div class="plate anim d4"><span class="lamp go">↓</span><p>The lane pays it<small>0.01 PUSD back</small></p></div>
+      <div class="plate anim d4"><span class="lamp go">↓</span><p>Lane pays it<small>0.01 PUSD back</small></p></div>
     </div>
-    <aside class="notes">A new user is paid in PUSD, a dollar CashToken. Every Bitcoin Cash transaction needs a fee in BCH, and they hold none they can spend; getting BCH first means an exchange detour, which is where new users give up. So we built the lane that pays the fee and let the user pay it back in the dollars they hold. The pain is protocol-level: we do not claim a named wallet shows a specific error; the ✕ is the state, not a screenshot.</aside>
+    <aside class="notes">A new user is paid in PUSD, a dollar CashToken. Every Bitcoin Cash transaction needs a fee in BCH, and they hold none they can spend; getting BCH first means an exchange detour, an extra step before a new user can move any dollars. So we built the lane that pays the fee and let the user pay it back in the dollars they hold. The pain is protocol-level: we do not claim a named wallet shows a specific error; the ✕ is the state, not a screenshot.</aside>
     <div class="foot"><span><b>FEEPASS</b> · BCH BLAZE 2026</span><span>v2 · 2026-11-15 · 3 / 7</span></div>
   </section>
 
   <!-- 4 · Benefits -->
   <section class="slide s4" data-title="Benefits" aria-label="Slide 4: Benefits">
-    <h2 class="display anim">Benefits</h2>
+    <h2 class="display anim">Benefits of FeePass</h2>
     <ul class="ben">
-      <li class="anim d2"><b>Send dollars on day one</b><ul><li>no BCH detour</li></ul></li>
+      <li class="anim d2"><b>No BCH detour</b><ul><li>send the dollars you hold</li></ul></li>
       <li class="anim d2"><b>Pay the fee in dollars</b><ul><li>0.01 PUSD per send</li></ul></li>
       <li class="anim d3"><b>Busy lanes retry</b><ul><li>random lane, same coin</li></ul></li>
       <li class="anim d3"><b>Bounded loss per send</b><ul><li>2,000 sats max</li></ul></li>
@@ -281,7 +284,7 @@ body.show-notes .notes-panel { display: block; }
         <div class="use"><b>CashTokens</b><span>PUSD in, PUSD out</span></div>
         <div class="use"><b>CashScript covenant</b><span>the pool of lanes</span></div>
         <div class="use"><b>WizardConnect</b><span>the user's wallet signs</span></div>
-        <div class="use"><b>BCH mainnet</b><span>enforced by the app</span></div>
+        <div class="use"><b>BCH mainnet</b><span>the app refuses other networks</span></div>
       </div>
       <div class="shape anim d3"><span>2 inputs · 3 outputs</span><span>572 bytes (Schnorr)</span><span>580 sats fee</span><span>sighash 0x61</span></div>
     </div>
@@ -297,7 +300,7 @@ body.show-notes .notes-panel { display: block; }
     <span class="hl">require(tx.outputs[2].tokenAmount ==</span>
     <span class="hl">        tx.inputs[1].tokenAmount + feeTokens);</span>
 }</pre>
-      <p class="codecap">excerpt · contracts/FeePassPool.cash · cashc 0.14.0 · 160-byte redeem script</p>
+      <p class="codecap">excerpt · contracts/FeePassPool.cash · cashc 0.14.0 · 160-byte redeem script · sizes computed offline, not a mainnet send</p>
     </div>
     <aside class="notes">One UTXO of the covenant is one lane. A send spends the user's PUSD coin (in0, signed by the user's wallet with SIGHASH_ALL|UTXOS, 0x61) and one lane (in1, no key). The excerpt omits R2, R3, R6, R7, R8 and the owner's withdraw path for space; the full contract is 8 rules plus withdraw. 572 bytes with a Schnorr signature; an ECDSA signature can add a few bytes, which the fee calculation allows for. Sizes from evidence/tx-shape.json.</aside>
     <div class="foot"><span><b>FEEPASS</b> · BCH BLAZE 2026</span><span>v2 · 2026-11-15 · 5 / 7</span></div>
@@ -305,13 +308,13 @@ body.show-notes .notes-panel { display: block; }
 
   <!-- 6 · The Vision -->
   <section class="slide s6" data-title="The vision" aria-label="Slide 6: The vision">
-    <h2 class="display anim">The vision</h2>
+    <h2 class="display anim">The vision for FeePass</h2>
     <div class="road">
       <div class="plate now anim d2"><h3>Now: live app, tested covenant</h3><p>Pool unfunded.</p></div>
       <div class="plate anim d3"><h3>Next: open the pool</h3><p>20 lanes, real wallets.</p></div>
       <div class="plate anim d4"><h3>Then: wallets run lanes</h3><p>Same covenant, their fees.</p></div>
     </div>
-    <div class="target anim d4"><span class="display">Target</span><p>20 open lanes on mainnet, then one wallet running its own.</p></div>
+    <div class="target anim d4"><span class="display">Target</span><p>20 open lanes, then one wallet running its own.</p></div>
     <p class="prio anim d4">Next priority: wallet integrations.</p>
     <aside class="notes">Now: the app is live and the covenant is tested, but the mainnet pool is not funded yet, so the front page reads "pool not open yet" (update this slide when it opens). Next: fund 20 lanes on mainnet and record sends from real wallets on the wallet gate page. Then: a wallet deploys the same covenant for its own new users and keeps the fees. A cent per send is small money; the business is volume across wallets. No usage numbers are shown because no mainnet usage exists yet; the hosted-lanes path is unvalidated.</aside>
     <div class="foot"><span><b>FEEPASS</b> · BCH BLAZE 2026</span><span>v2 · 2026-11-15 · 6 / 7</span></div>

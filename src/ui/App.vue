@@ -136,7 +136,7 @@ const bch = (s: bigint | null) => (s === null ? 'unknown' : (Number(s) / 1e8).to
 
   </main>
 
-  <AppFooter :repo-url="config.repoUrl" />
+  <AppFooter :repo-url="config.repoUrl" :payout="config.payoutAddress" />
 
   <WizardConnectQRDialog v-if="wc.uri.value && wc.qrUri.value" :show="showQr && !stopQr" :on-close="() => (showQr = false)"
     :uri="wc.uri.value" :qr-uri="wc.qrUri.value" title="Connect a BCH wallet" subtitle="Scan with a WizardConnect wallet"

@@ -103,6 +103,7 @@ dd small { display: block; font: 400 13px/1.35 var(--font-body); color: var(--mu
   .paid { font-size: 36px; }
   dl div { grid-template-columns: 7.4em 1fr; }
   .tag { font-size: 13px; padding: 4px 7px; }
+  dd small { display: none; } /* keep the mobile ticket short; the desktop ticket carries the sub-lines */
   .cap { font-size: 12px; }
 }
 </style>

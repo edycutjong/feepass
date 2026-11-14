@@ -33,7 +33,7 @@ The picture is an illustration: it shows open lanes and a **sample** ticket, not
 
 ### The Problem
 
-A new user holds dollars (PUSD, a CashToken on Bitcoin Cash) and **no BCH**. Every transaction needs a miner fee paid in BCH, so they cannot move any of those dollars. Getting BCH first means an exchange detour, which is where new users give up.
+A new user holds dollars (PUSD, a CashToken on Bitcoin Cash) and **no BCH**. Every transaction needs a miner fee paid in BCH, so they cannot move any of those dollars. Getting BCH first means an exchange detour: an extra step before a new user can move any of those dollars.
 
 ### The Solution
 

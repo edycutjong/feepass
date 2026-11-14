@@ -58,8 +58,8 @@ onBeforeUnmount(() => { io?.disconnect(); cancelAnimationFrame(raf); });
       <h1 class="display headline"><span class="l1">The lane <span class="plate-word">pays the fee.</span></span>
         <span class="l2">You pay a cent.</span></h1>
       <SampleBooth class="booth-slot" :fee="fee" />
+      <p class="plain">Send dollars on Bitcoin Cash with no spendable BCH.</p>
       <div class="copy">
-        <p class="plain">Send dollars on Bitcoin Cash with no spendable BCH.</p>
         <p class="sub">A pool lane pays the <strong class="data">{{ std.minerFeeSats }} sats</strong> miner fee and the covenant takes back exactly
           <strong class="data">{{ fee }} PUSD</strong>, in the same transaction. Your wallet signs only its own coin.</p>
         <div class="ctas">
@@ -88,8 +88,9 @@ onBeforeUnmount(() => { io?.disconnect(); cancelAnimationFrame(raf); });
     <section class="live wide" aria-labelledby="live-h">
       <div class="live-head">
         <h2 id="live-h" class="display">The pool, live from mainnet</h2>
-        <p class="muted">Each signal head is one pool lane, read from a mainnet server: <strong>↓</strong> open, <strong>✕</strong> too low to
-          cover a full send. Unlit heads mean there is no lane to show yet (not funded, or still loading). A send takes one open lane at random.</p>
+        <p class="muted">Each signal head is one pool lane, read from a mainnet server: <strong>↓</strong> open, <strong>✕</strong> below the
+          {{ fmt(measured.maxSubsidySats) }}-sat per-send cap plus the lane's own dust, so the app will not pick it. Unlit heads mean there is no lane to
+          show: the pool is not funded, the read is still loading, or the read failed. A send takes one open lane at random.</p>
       </div>
       <LaneBoard :board="board" :error="error" :active="null" :chosen="null" :slots="slots" large />
       <p class="small"><a href="/pool">Open the pool page</a> for the covenant address and every lane's balance.</p>
@@ -178,7 +179,7 @@ require(tx.outputs.length == 3);</code></pre>
       </details>
       <details>
         <summary>What stops someone from draining the pool?</summary>
-        <p>A send costs a lane its miner fee: {{ std.minerFeeSats }} sats for a standard send, {{ measured.maxMeasuredSubsidySats }} when the
+        <p>A send costs a lane its miner fee: {{ std.minerFeeSats }} sats for a standard send, {{ measured.maxMeasuredSubsidySats }} sats when the
           lane also tops up a small coin's dust, and never more than {{ fmt(measured.maxSubsidySats) }} sats. Every send pays the pool exactly
           {{ fee }} PUSD. The covenant bounds each send, not the total: many sends can still use lanes up, and a lane that runs low closes
           (✕) until the operator refills it. Lanes are separate coins, so one send touches one lane.</p>
@@ -190,7 +191,7 @@ require(tx.outputs.length == 3);</code></pre>
       </details>
       <details>
         <summary>Is this really mainnet?</summary>
-        <p>Only mainnet: the header shows the live block height, and every chain read uses a mainnet server.
+        <p>Yes: mainnet is the only network it uses. The header shows the live block height, and every chain read uses a mainnet server.
           <template v-if="poolUnfunded">The pool's lanes are not funded yet, so sends wait for the pool to open.</template>
           <template v-else-if="board">{{ board.open }} of {{ lanesFunded }} lanes are open right now.</template>
           <template v-else>The pool status is still loading.</template></p>
@@ -202,16 +203,16 @@ require(tx.outputs.length == 3);</code></pre>
 <style scoped>
 .front { overflow-x: clip; }
 .wide { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
-.hero { display: grid; grid-template-columns: minmax(0, .84fr) minmax(0, 1.16fr); grid-template-areas: "h booth" "copy booth";
+.hero { display: grid; grid-template-columns: minmax(0, .84fr) minmax(0, 1.16fr); grid-template-areas: "h booth" "plain booth" "copy booth";
   column-gap: 56px; row-gap: 22px; padding-top: 48px; padding-bottom: 48px; }
-.headline { grid-area: h; align-self: end; font-size: clamp(38px, 4.3vw, 60px); line-height: 1; letter-spacing: 0; }
+.headline { grid-area: h; align-self: end; margin-top: 4px; font-size: clamp(38px, 4.3vw, 60px); line-height: 1; letter-spacing: 0; }
 .headline .l1, .headline .l2 { display: block; animation: rise .6s var(--ease) both; }
 .headline .l2 { animation-delay: .12s; }
 .booth-slot { grid-area: booth; align-self: center; }
 .copy { grid-area: copy; align-self: start; }
 .plate-word { display: inline-block; white-space: nowrap; background: var(--sign); color: var(--sign-ink); padding: .06em .2em .02em; margin: .04em 0; border-radius: .12em;
   box-shadow: inset 0 0 0 .05em var(--sign), inset 0 0 0 .085em rgba(255, 255, 255, .92); }
-.plain { font-size: 23px; line-height: 1.35; font-weight: 600; margin: 0 0 10px; max-width: 26em; }
+.plain { grid-area: plain; font-size: 23px; line-height: 1.35; font-weight: 600; margin: 0; max-width: 26em; }
 .sub { font-size: 19px; max-width: 32em; margin: 0 0 24px; animation: rise .6s var(--ease) .22s both; }
 .sub strong.data { font-size: .95em; white-space: nowrap; }
 .ctas { display: flex; flex-wrap: wrap; gap: 12px; animation: rise .6s var(--ease) .32s both; }
@@ -288,7 +289,7 @@ summary:hover { color: var(--sign); }
 details p { margin: 0 0 18px; max-width: 65ch; }
 
 @media (max-width: 960px) {
-  .hero { grid-template-columns: 1fr; grid-template-areas: "h" "booth" "copy"; row-gap: 26px; padding-top: 40px; }
+  .hero { grid-template-columns: 1fr; grid-template-areas: "h" "plain" "booth" "copy"; row-gap: 20px; padding-top: 40px; }
   .receipts .grid { grid-template-columns: 1fr 1fr; }
   .receipt:nth-child(3) { border-left: 0; padding-left: 0; }
   .receipt:nth-child(n+3) { border-top: 2px dashed var(--rule); }
@@ -297,7 +298,7 @@ details p { margin: 0 0 18px; max-width: 65ch; }
   .r5 { grid-row: auto; grid-column: span 2; }
 }
 @media (max-width: 560px) {
-  .wide { padding: 0 16px; }
+  .wide { padding-left: 16px; padding-right: 16px; } /* sides only: the sections keep their own top padding */
   .plain { font-size: 20px; }
   .sub { font-size: 17px; }
   .big { font-size: 19px; padding: 0 20px; }
