@@ -109,10 +109,13 @@ A judge whose wallet holds no PUSD cannot make the required mainnet send, so one
 
 Guarantees are stated at their real strength. **One claim per receiving address and 3 claims per UTC day**, both read from the
 faucet address's own on-chain history (a claim is any tx that spends a faucet coin, so the operator's own manual spends from the faucet key count too; a judge
-returning PUSD to the faucet is not a claim). There is no database. The history read is not atomic, so two requests inside about a minute can both pass, bounded by the
-claim size; a per-IP limit (3 per hour) lives in memory and is best effort. The hard budget is what the faucet holds. The
-starter output carries at least twice the token dust, asserted before every broadcast, so the first send needs no top-up.
-Concurrent claims pick a random faucet coin and retry on a coin conflict.
+returning PUSD to the faucet is not a claim). There is no database, so the chain serializes concurrent claims: every claim
+spends the faucet's largest covering PUSD coin and its largest BCH coin (deterministic, ties by outpoint), so two claims built
+from the same history read conflict and only one is accepted; the loser re-reads the history (mempool included) and re-checks
+both limits before it rebuilds (`test/starter.test.ts`, the two "race" cases). What remains is the seconds between a broadcast
+and its appearance in the Electrum server's history. A per-IP limit (3 per hour) lives in memory and is best effort. The hard
+budget is what the faucet holds. The starter output carries at least twice the token dust, asserted before every broadcast,
+so the first send needs no top-up.
 
 ## 6. Trust and failure model
 
