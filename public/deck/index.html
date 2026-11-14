@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FeePass · pitch deck · BCH BLAZE 2026</title>
+<meta name="description" content="FeePass pitch deck in the BCH BLAZE Widget Factory structure: send PUSD on Bitcoin Cash with no spendable BCH; a covenant lane pays the miner fee and you pay 0.01 PUSD.">
+<meta name="theme-color" content="#1F4F9A">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<style>
+@font-face { font-family: "Encode Sans Condensed"; font-weight: 800; font-display: swap; src: url(fonts/encode-sans-condensed-latin-800-normal.woff2) format("woff2"); }
+@font-face { font-family: "Public Sans"; font-weight: 400; font-display: swap; src: url(fonts/public-sans-latin-400-normal.woff2) format("woff2"); }
+@font-face { font-family: "Public Sans"; font-weight: 600; font-display: swap; src: url(fonts/public-sans-latin-600-normal.woff2) format("woff2"); }
+@font-face { font-family: "Sometype Mono"; font-weight: 400; font-display: swap; src: url(fonts/sometype-mono-latin-400-normal.woff2) format("woff2"); }
+@font-face { font-family: "Sometype Mono"; font-weight: 600; font-display: swap; src: url(fonts/sometype-mono-latin-600-normal.woff2) format("woff2"); }
+:root {
+  --bg: #EEF0EB; --paper: #FBFBF7; --ink: #16202B; --muted: #5E6670; --sign: #1F4F9A; --sign-ink: #FFFFFF; --sign-dim: #B7CBEC;
+  --housing: #111418; --before: #C8452C; --after: #1E9E5A; --caution: #F2B301; --rule: #CDD2CA;
+  --font-display: "Encode Sans Condensed", "Arial Narrow", sans-serif;
+  --font-body: "Public Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-data: "Sometype Mono", ui-monospace, monospace;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+}
+* { box-sizing: border-box; }
+html { overflow: hidden; }
+body { margin: 0; height: 100vh; background: #2B3038; color: var(--ink); font: 400 30px/1.45 var(--font-body); font-variant-numeric: tabular-nums; }
+::selection { background: var(--sign); color: var(--sign-ink); }
+a { color: inherit; text-underline-offset: .18em; }
+a:hover { text-decoration-thickness: 3px; }
+:focus-visible { outline: 3px solid var(--caution); outline-offset: 3px; }
+.stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: 0 0; }
+.slide { position: absolute; inset: 0; background: var(--bg); padding: 96px 128px 120px; display: none; overflow: hidden; }
+.slide.on { display: block; }
+.display { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; letter-spacing: .01em; line-height: 1; margin: 0; }
+.data { font-family: var(--font-data); }
+h2.display { font-size: 104px; margin-bottom: 44px; }
+.muted { color: var(--muted); }
+.foot { position: absolute; left: 128px; right: 128px; bottom: 44px; display: flex; justify-content: space-between; font: 400 20px/1 var(--font-data);
+  color: var(--muted); letter-spacing: .04em; border-top: 2px solid var(--rule); padding-top: 18px; }
+.foot b { font-weight: 600; color: var(--ink); }
+
+/* sign plate + signal heads (the lane board) */
+.plate { background: var(--sign); color: var(--sign-ink); border-radius: 18px; padding: 30px 30px 18px;
+  box-shadow: inset 0 0 0 5px var(--sign), inset 0 0 0 9px rgba(255, 255, 255, .92), 0 24px 50px rgba(17, 20, 24, .18); }
+.heads { display: grid; grid-auto-flow: column; gap: 16px; }
+.head { display: grid; justify-items: center; gap: 8px; }
+.lamp { width: 92px; height: 92px; border-radius: 10px; background: var(--housing); color: var(--sign-ink); display: grid; place-items: center;
+  font: 800 52px/1 var(--font-display); }
+.num { font: 800 26px/1 var(--font-display); }
+.lamp.go { background: var(--after); }
+.lamp.no { color: var(--before); }
+.cap { margin: 16px 0 0; text-align: center; font: 400 20px/1 var(--font-data); letter-spacing: .05em; opacity: .9; }
+.slot { width: 80%; height: 26px; margin: -4px auto 0; background: var(--housing); border-radius: 0 0 12px 12px; position: relative; z-index: 2; }
+.ticket { position: relative; width: 76%; margin: -8px auto 0; background: var(--paper); font-family: var(--font-data); padding: 30px 32px 22px;
+  filter: drop-shadow(0 14px 22px rgba(17, 20, 24, .16)); }
+.ticket::after { content: ''; position: absolute; left: 0; right: 0; bottom: -14px; height: 14px;
+  background: linear-gradient(135deg, var(--paper) 50%, transparent 50%) 0 0 / 22px 14px repeat-x,
+              linear-gradient(225deg, var(--paper) 50%, transparent 50%) 0 0 / 22px 14px repeat-x; }
+.thead { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px dashed var(--rule); padding-bottom: 14px; }
+.thead .display { font-size: 64px; }
+.tag { font: 600 20px/1 var(--font-data); letter-spacing: .12em; border: 3px solid var(--ink); border-radius: 6px; padding: 7px 12px; }
+.paid { color: var(--after); font-size: 76px; margin: 18px 0 8px; }
+.row { display: grid; grid-template-columns: 9em 1fr; gap: 14px; padding: 12px 0; border-bottom: 2px dotted var(--rule); font-size: 25px; }
+.row span:first-child { color: var(--muted); }
+.row b { font-weight: 600; }
+.row small { display: block; font-size: 19px; color: var(--muted); font-weight: 400; }
+.note { margin: 16px 0 0; font: 400 19px/1.4 var(--font-body); color: var(--muted); }
+
+/* the highlighted phrase: a word on a road sign */
+.plate-word { display: inline-block; white-space: nowrap; background: var(--sign); color: var(--sign-ink); padding: .05em .2em .01em; border-radius: .1em;
+  box-shadow: inset 0 0 0 .045em var(--sign), inset 0 0 0 .08em rgba(255, 255, 255, .92); }
+
+/* 1 · title */
+.s1 { display: none; }
+.s1.on { display: grid; grid-template-columns: minmax(0, 1fr) 640px; gap: 80px; align-items: center; }
+.mark { display: flex; align-items: center; gap: 40px; }
+.mark img { width: 170px; height: 170px; }
+.mark .display { font-size: 196px; letter-spacing: .02em; }
+.team { margin: 54px 0 0; font-size: 36px; }
+.links { margin: 26px 0 0; display: grid; gap: 8px; font: 400 28px/1.35 var(--font-data); }
+.links span { color: var(--muted); display: inline-block; width: 5.4em; }
+.event { margin: 40px 0 0; display: inline-block; font: 800 28px/1 var(--font-display); text-transform: uppercase; letter-spacing: .06em;
+  border: 3px solid var(--ink); border-radius: 8px; padding: 14px 20px; }
+
+/* 2 · name + tagline */
+.s2 .big { font-size: 150px; line-height: 1.02; margin-top: 24px; }
+.s2 .tagline { margin: 44px 0 0; font-size: 42px; max-width: 32em; }
+.chip { display: inline-flex; gap: 18px; align-items: center; margin: 34px 0 0; font: 400 32px/1 var(--font-data); background: var(--paper); border: 2px solid var(--rule);
+  border-radius: 10px; padding: 20px 26px; }
+.chip span { font: 800 26px/1 var(--font-display); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+
+/* 3 · story */
+.s3.on { display: grid; grid-template-columns: minmax(0, 1fr) 660px; gap: 90px; align-items: center; }
+.s3 p.story { font-size: 42px; margin: 0 0 30px; max-width: 24em; }
+.s3 p.story strong { font-weight: 600; }
+.ba { display: grid; gap: 34px; margin-top: 60px; }
+.ba .plate { display: grid; grid-template-columns: 150px 1fr; gap: 34px; align-items: center; padding: 36px 38px; }
+.ba .lamp { width: 150px; height: 150px; font-size: 88px; }
+.ba p { margin: 0; font: 800 52px/1.02 var(--font-display); text-transform: uppercase; }
+.ba small { display: block; font: 400 28px/1.3 var(--font-body); text-transform: none; color: var(--sign-dim); margin-top: 8px; }
+
+/* 4 · benefits */
+.ben { display: grid; grid-template-columns: 1fr 1fr; gap: 44px 90px; margin-top: 20px !important; }
+.ben li { list-style: none; padding: 0 0 30px 84px; border-bottom: 2px dotted var(--rule); position: relative; }
+.ben li::before { content: '↓'; position: absolute; left: 0; top: 0; width: 60px; height: 60px; border-radius: 8px; background: var(--housing); color: var(--sign-ink);
+  display: grid; place-items: center; font: 800 38px/1 var(--font-display); }
+.ben b { display: block; font: 800 58px/1.02 var(--font-display); text-transform: uppercase; }
+.ben ul { margin: 12px 0 0; padding: 0; }
+.ben ul li { border: 0; padding: 0 0 0 30px; font-size: 34px; color: var(--muted); }
+.ben ul li::before { content: '–'; background: none; color: var(--muted); width: auto; height: auto; font: 400 34px/1.45 var(--font-body); top: 0; }
+ul.ben { margin: 0; padding: 0; }
+
+/* 5 · BCH usage */
+.s5.on { display: grid; grid-template-columns: 640px 1fr; grid-template-rows: auto 1fr; gap: 50px 70px; align-items: center; }
+.s5 h2.display { grid-column: 1 / -1; margin-bottom: 0; }
+.uses { display: grid; gap: 0; }
+.use { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 22px 0; border-bottom: 2px dotted var(--rule); }
+.use b { font: 800 48px/1 var(--font-display); text-transform: uppercase; }
+.use span { font-size: 28px; color: var(--muted); }
+.shape { margin-top: 30px; display: flex; gap: 16px; flex-wrap: wrap; }
+.shape span { font: 600 25px/1 var(--font-data); background: var(--paper); border: 2px solid var(--rule); border-radius: 8px; padding: 14px 16px; }
+.code { margin: 0; background: var(--housing); color: #E6E9EE; border-radius: 14px; padding: 40px 44px; font: 400 27px/1.6 var(--font-data); white-space: pre;
+  box-shadow: 0 24px 50px rgba(17, 20, 24, .18); }
+.code .c { color: #8FA3BF; }
+.code .k { color: #9FD3FF; }
+.code .hl { color: var(--sign-ink); background: rgba(31, 79, 154, .65); border-radius: 4px; }
+.codecap { margin: 16px 0 0; font: 400 20px/1.3 var(--font-data); color: var(--muted); }
+
+/* 6 · vision */
+.road { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+.road .plate { padding: 38px 40px 40px; min-height: 470px; }
+.road .k { font: 800 30px/1 var(--font-display); letter-spacing: .08em; color: var(--sign-dim); }
+.road h3 { font: 800 62px/1 var(--font-display); text-transform: uppercase; margin: 20px 0 24px; }
+.road p { margin: 0; font-size: 32px; color: var(--sign-ink); }
+.road .now { background: var(--housing); box-shadow: 0 24px 50px rgba(17, 20, 24, .18); }
+.target { margin: 46px 0 0; display: flex; gap: 30px; align-items: baseline; border-top: 4px solid var(--ink); padding-top: 26px; }
+.target .display { font-size: 52px; }
+.target p { margin: 0; font-size: 42px; font-weight: 600; }
+.prio { font-size: 30px; color: var(--muted); margin: 16px 0 0; }
+
+/* 7 · thanks */
+.s7.on { display: grid; grid-template-columns: 1fr 520px; gap: 90px; align-items: center; }
+.s7 .display.huge { font-size: 250px; }
+.s7 .url { margin: 40px 0 0; font: 600 54px/1 var(--font-data); }
+.s7 .how { margin: 24px 0 0; font-size: 34px; max-width: 24em; }
+.qrbox { background: var(--paper); border: 2px solid var(--rule); border-radius: 18px; padding: 30px; display: grid; gap: 16px; justify-items: center; }
+.qr { width: 440px; height: 440px; display: block; }
+.qrbox span { font: 400 22px/1 var(--font-data); color: var(--muted); }
+
+/* chrome: controls, notes, progress */
+.ctrl { position: fixed; right: 18px; bottom: 16px; display: flex; gap: 8px; z-index: 5; opacity: 0; transition: opacity .25s var(--ease); }
+body.awake .ctrl, .ctrl:focus-within, body.show-notes .ctrl { opacity: 1; }
+.ctrl button { font: 800 16px/1 var(--font-display); text-transform: uppercase; letter-spacing: .05em; min-width: 44px; min-height: 44px; padding: 0 14px;
+  border-radius: 8px; border: 2px solid #5A626E; background: #1C2026; color: #FFFFFF; cursor: pointer; transition: background-color .14s var(--ease), transform .14s var(--ease); }
+.ctrl button:hover { background: var(--sign); border-color: var(--sign); }
+.ctrl button:active { transform: translateY(1px); }
+.ctrl .count { color: #C9CFD8; font: 400 15px/44px var(--font-data); padding: 0 6px; }
+.notes { display: none; }
+body.show-notes .notes-panel { display: block; }
+.notes-panel { display: none; position: fixed; left: 0; right: 0; bottom: 0; max-height: 36vh; overflow: auto; background: #1C2026; color: #E6E9EE;
+  font: 400 17px/1.5 var(--font-body); padding: 16px 22px 70px; border-top: 3px solid var(--sign); z-index: 4; }
+.notes-panel b { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .05em; color: var(--sign-dim); }
+.bar { position: fixed; left: 0; top: 0; height: 4px; background: var(--after); transition: width .3s var(--ease); z-index: 5; }
+.slide.on .anim { animation: rise .55s var(--ease) both; }
+.slide.on .anim.d2 { animation-delay: .1s; } .slide.on .anim.d3 { animation-delay: .2s; } .slide.on .anim.d4 { animation-delay: .3s; }
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .slide.on .anim { animation: none; } .bar, .ctrl button { transition: none; } }
+@media print {
+  @page { size: 1920px 1080px; margin: 0; }
+  html, body { overflow: visible; height: auto; background: none; }
+  .stage { position: static; transform: none !important; width: 1920px; height: auto; }
+  .slide { position: relative; display: block !important; width: 1920px; height: 1080px; break-after: page; }
+  .s1, .s3, .s5, .s7 { display: grid !important; }
+  .ctrl, .bar, .notes-panel { display: none !important; }
+  .anim { animation: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="bar" id="bar"></div>
+<main class="stage" id="stage" aria-live="polite">
+
+  <!-- 1 · Title -->
+  <section class="slide s1" data-title="Title" aria-label="Slide 1: Title">
+    <div>
+      <div class="mark anim"><img src="icon.svg" alt="" width="190" height="190"><h1 class="display">FeePass</h1></div>
+      <p class="team anim d2"><strong>Team FeePass:</strong> edycutjong (solo builder)</p>
+      <div class="links anim d3">
+        <div><span>Website</span><a href="https://feepass.edycu.dev">feepass.edycu.dev</a></div>
+        <div><span>GitHub</span><a href="https://github.com/edycutjong/feepass">github.com/edycutjong/feepass</a></div>
+      </div>
+      <p class="event anim d4">BCH BLAZE 2026 · Mainnet Track</p>
+    </div>
+    <div class="anim d2" aria-label="Sample: lane 14 is green and the toll ticket reads PAID">
+      <div class="plate">
+        <div class="heads">
+          <div class="head"><span class="lamp">↓</span><span class="num">12</span></div>
+          <div class="head"><span class="lamp">↓</span><span class="num">13</span></div>
+          <div class="head"><span class="lamp go">↓</span><span class="num">14</span></div>
+          <div class="head"><span class="lamp">↓</span><span class="num">15</span></div>
+          <div class="head"><span class="lamp">↓</span><span class="num">16</span></div>
+        </div>
+        <p class="cap">sample send · lane picked at random</p>
+      </div>
+      <div class="slot"></div>
+      <div class="ticket">
+        <div class="thead"><span class="display">Lane 14</span><span class="tag">SAMPLE</span></div>
+        <p class="paid display">✓ Paid</p>
+        <div class="row"><span>Fee you paid</span><b>0.01 PUSD<small>to the pool</small></b></div>
+        <div class="row"><span>Miner fee</span><b>580 sats<small>paid by the lane</small></b></div>
+        <div class="row"><span>Spendable BCH</span><b>not used</b></div>
+      </div>
+    </div>
+    <aside class="notes">FeePass, built solo for the BCH BLAZE 2026 Mainnet Track. The picture is the whole product: a row of toll lanes, one turns green, a ticket prints. The ticket is a sample; its figures are measured from the compiled covenant (evidence/tx-shape.json). The live app is feepass.edycu.dev.</aside>
+    <div class="foot"><span><b>FEEPASS</b> · BCH BLAZE 2026</span><span>v1 · 2026-11-15 · 1 / 7</span></div>
+  </section>
+
+  <!-- 2 · Name + tagline -->
+  <section class="slide s2" data-title="Name and tagline" aria-label="Slide 2: Name and tagline">
+    <h2 class="display anim" style="font-size:64px;margin:0;color:var(--muted)">FeePass</h2>
+    <p class="display big anim d2">The lane <span class="plate-word">pays the fee.</span><br>You pay a cent.</p>
+    <p class="tagline anim d3"><strong>Send dollars on Bitcoin Cash. No spendable BCH needed.</strong> A covenant pays the miner fee; you pay 0.01 PUSD in the same transaction.</p>
+    <p class="chip anim d4"><span>GitHub</span>github.com/edycutjong/feepass</p>
+    <aside class="notes">Tagline: send dollars on Bitcoin Cash with no spendable BCH. Not "zero BCH" (a token coin carries dust) and not free: the fee is 0.01 PUSD per send, paid to the pool. MIT licensed.</aside>
+    <div class="foot"><span><b>FEEPASS</b> · BCH BLAZE 2026</span><span>v1 · 2026-11-15 · 2 / 7</span></div>
+  </section>
+
+  <!-- 3 · The Story -->
+  <section class="slide s3" data-title="The story" aria-label="Slide 3: The story">
+    <div>
+      <h2 class="display anim">The story</h2>
+      <p class="story anim d2">A new user is paid in <strong>PUSD</strong>, a dollar CashToken. They press send.</p>
+      <p class="story anim d3">Every Bitcoin Cash transaction needs a fee in <strong>BCH</strong>, and they hold none they can spend. Getting BCH first means an exchange detour: that is where new users give up.</p>
+      <p class="story anim d4">So we built the lane that pays the fee, and let the user pay it back in the dollars they already hold.</p>
+    </div>
+    <div class="ba">
+      <div class="plate anim d2"><span class="lamp no">✕</span><p>Fee due in BCH<small>dollars in the wallet, no spendable BCH</small></p></div>
+      <div class="plate anim d4"><span class="lamp go">↓</span><p>The lane pays it<small>0.01 PUSD back to the pool, same transaction</small></p></div>
+    </div>
+    <aside class="notes">The pain is protocol-level, not a UI bug: a token holder with no spendable BCH cannot pay a miner fee. FeePass does not claim any named wallet shows a specific error; the ✕ is the state, not a screenshot.</aside>
+    <div class="foot"><span><b>FEEPASS</b> · BCH BLAZE 2026</span><span>v1 · 2026-11-15 · 3 / 7</span></div>
+  </section>
+
+  <!-- 4 · Benefits -->
+  <section class="slide s4" data-title="Benefits" aria-label="Slide 4: Benefits">
+    <h2 class="display anim">Benefits</h2>
+    <ul class="ben">
+      <li class="anim d2"><b>Send dollars on day one</b><ul><li>no exchange detour for BCH</li></ul></li>
+      <li class="anim d2"><b>Pay the fee in dollars</b><ul><li>0.01 PUSD, same transaction</li></ul></li>
+      <li class="anim d3"><b>Your keys, your outputs</b><ul><li>your wallet signs only its own coin</li></ul></li>
+      <li class="anim d3"><b>Busy lanes don't fail</b><ul><li>random lane, automatic retry, same coin</li></ul></li>
+      <li class="anim d4"><b>Safe to fund</b><ul><li>a lane loses at most 2,000 sats per send</li></ul></li>
+      <li class="anim d4"><b>Any wallet can run lanes</b><ul><li>same MIT covenant, its own fee</li></ul></li>
+    </ul>
+    <aside class="notes">Each benefit maps to a covenant rule or a tested flow: R5 equality (exactly 0.01 PUSD to the pool), R4 cap (2,000 sats per send), R1 fixed shape, and the retry that re-signs the same user coin so two versions of one payment can never both confirm (test/flow.test.ts). The white-label path is unvalidated with any wallet team.</aside>
+    <div class="foot"><span><b>FEEPASS</b> · BCH BLAZE 2026</span><span>v1 · 2026-11-15 · 4 / 7</span></div>
+  </section>
+
+  <!-- 5 · BCH Usage -->
+  <section class="slide s5" data-title="BCH usage" aria-label="Slide 5: BCH usage">
+    <h2 class="display anim">BCH usage</h2>
+    <div>
+      <div class="uses anim d2">
+        <div class="use"><b>CashTokens</b><span>PUSD in, PUSD out</span></div>
+        <div class="use"><b>CashScript covenant</b><span>the pool of lanes</span></div>
+        <div class="use"><b>WizardConnect</b><span>the user's wallet signs</span></div>
+        <div class="use"><b>BCH mainnet</b><span>enforced by the app</span></div>
+      </div>
+      <div class="shape anim d3"><span>2 inputs · 3 outputs</span><span>572 bytes</span><span>580 sats fee</span><span>sighash 0x61</span></div>
+    </div>
+    <div class="anim d3">
+<pre class="code"><span class="k">function</span> sponsorPaid() {
+    <span class="c">// R1 fixed shape</span>
+    require(tx.inputs.length == 2);
+    require(tx.outputs.length == 3);
+    <span class="c">// R4 hard per-send cap</span>
+    require(tx.outputs[2].value >=
+            tx.inputs[1].value - maxSubsidy);
+    <span class="c">// R5 exactly feeTokens PUSD to the pool</span>
+    <span class="hl">require(tx.outputs[2].tokenAmount ==</span>
+    <span class="hl">        tx.inputs[1].tokenAmount + feeTokens);</span>
+}</pre>
+      <p class="codecap">excerpt · contracts/FeePassPool.cash · cashc 0.14.0 · 160-byte redeem script</p>
+    </div>
+    <aside class="notes">One UTXO of the covenant is one lane. A send spends the user's PUSD coin (in0, signed by the user's wallet with SIGHASH_ALL|UTXOS, 0x61) and one lane (in1, no key). The excerpt omits R2, R3, R6, R7, R8 for space; the full contract is 8 rules. Sizes from evidence/tx-shape.json.</aside>
+    <div class="foot"><span><b>FEEPASS</b> · BCH BLAZE 2026</span><span>v1 · 2026-11-15 · 5 / 7</span></div>
+  </section>
+
+  <!-- 6 · The Vision -->
+  <section class="slide s6" data-title="The vision" aria-label="Slide 6: The vision">
+    <h2 class="display anim">The vision</h2>
+    <div class="road">
+      <div class="plate now anim d2"><span class="k">NOW</span><h3>Live app, tested covenant</h3><p>The pool is not funded yet: the lanes read "not open".</p></div>
+      <div class="plate anim d3"><span class="k">NEXT</span><h3>Open the pool</h3><p>20 lanes on mainnet, sends from real wallets, results on the wallet gate page.</p></div>
+      <div class="plate anim d4"><span class="k">THEN</span><h3>Wallets run lanes</h3><p>A wallet deploys the same covenant for its own new users and keeps the fees.</p></div>
+    </div>
+    <div class="target anim d4"><span class="display">Target</span><p>20 open lanes on mainnet, then one wallet running its own.</p></div>
+    <p class="prio anim d4">Next priority: wallet integrations. A cent per send is small money; the business is volume across wallets.</p>
+    <aside class="notes">No usage numbers are shown because no mainnet usage exists yet. The hosted-lanes service for wallets is unvalidated and not claimed. Funding the 20 lanes needs the operator's mainnet authorization and BCH plus lane-seed PUSD.</aside>
+    <div class="foot"><span><b>FEEPASS</b> · BCH BLAZE 2026</span><span>v1 · 2026-11-15 · 6 / 7</span></div>
+  </section>
+
+  <!-- 7 · Thank you -->
+  <section class="slide s7" data-title="Thank you" aria-label="Slide 7: Thank you">
+    <div>
+      <p class="display huge anim">Thank you.</p>
+      <p class="url anim d2"><a href="https://feepass.edycu.dev">feepass.edycu.dev</a></p>
+      <p class="how anim d3">Scan, connect a WizardConnect wallet that holds PUSD, and send.</p>
+    </div>
+    <div class="qrbox anim d2"><svg class="qr" viewBox="0 0 33 33" role="img" aria-label="QR code for https://feepass.edycu.dev" shape-rendering="crispEdges"><rect width="33" height="33" fill="#FFFFFF"/><path d="M4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM10 4h1v1h-1zM13 4h1v1h-1zM14 4h1v1h-1zM18 4h1v1h-1zM19 4h1v1h-1zM22 4h1v1h-1zM23 4h1v1h-1zM24 4h1v1h-1zM25 4h1v1h-1zM26 4h1v1h-1zM27 4h1v1h-1zM28 4h1v1h-1zM4 5h1v1h-1zM10 5h1v1h-1zM14 5h1v1h-1zM15 5h1v1h-1zM18 5h1v1h-1zM19 5h1v1h-1zM22 5h1v1h-1zM28 5h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM13 6h1v1h-1zM15 6h1v1h-1zM16 6h1v1h-1zM22 6h1v1h-1zM24 6h1v1h-1zM25 6h1v1h-1zM26 6h1v1h-1zM28 6h1v1h-1zM4 7h1v1h-1zM6 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM13 7h1v1h-1zM14 7h1v1h-1zM16 7h1v1h-1zM18 7h1v1h-1zM19 7h1v1h-1zM22 7h1v1h-1zM24 7h1v1h-1zM25 7h1v1h-1zM26 7h1v1h-1zM28 7h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM10 8h1v1h-1zM13 8h1v1h-1zM14 8h1v1h-1zM15 8h1v1h-1zM19 8h1v1h-1zM20 8h1v1h-1zM22 8h1v1h-1zM24 8h1v1h-1zM25 8h1v1h-1zM26 8h1v1h-1zM28 8h1v1h-1zM4 9h1v1h-1zM10 9h1v1h-1zM12 9h1v1h-1zM15 9h1v1h-1zM16 9h1v1h-1zM17 9h1v1h-1zM18 9h1v1h-1zM19 9h1v1h-1zM22 9h1v1h-1zM28 9h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM12 10h1v1h-1zM14 10h1v1h-1zM16 10h1v1h-1zM18 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM23 10h1v1h-1zM24 10h1v1h-1zM25 10h1v1h-1zM26 10h1v1h-1zM27 10h1v1h-1zM28 10h1v1h-1zM13 11h1v1h-1zM15 11h1v1h-1zM16 11h1v1h-1zM18 11h1v1h-1zM4 12h1v1h-1zM7 12h1v1h-1zM9 12h1v1h-1zM10 12h1v1h-1zM12 12h1v1h-1zM13 12h1v1h-1zM14 12h1v1h-1zM15 12h1v1h-1zM17 12h1v1h-1zM18 12h1v1h-1zM19 12h1v1h-1zM20 12h1v1h-1zM21 12h1v1h-1zM23 12h1v1h-1zM5 13h1v1h-1zM7 13h1v1h-1zM8 13h1v1h-1zM11 13h1v1h-1zM12 13h1v1h-1zM16 13h1v1h-1zM17 13h1v1h-1zM21 13h1v1h-1zM22 13h1v1h-1zM28 13h1v1h-1zM5 14h1v1h-1zM6 14h1v1h-1zM7 14h1v1h-1zM9 14h1v1h-1zM10 14h1v1h-1zM11 14h1v1h-1zM13 14h1v1h-1zM16 14h1v1h-1zM18 14h1v1h-1zM20 14h1v1h-1zM21 14h1v1h-1zM22 14h1v1h-1zM23 14h1v1h-1zM27 14h1v1h-1zM28 14h1v1h-1zM4 15h1v1h-1zM5 15h1v1h-1zM6 15h1v1h-1zM7 15h1v1h-1zM9 15h1v1h-1zM11 15h1v1h-1zM14 15h1v1h-1zM16 15h1v1h-1zM17 15h1v1h-1zM21 15h1v1h-1zM24 15h1v1h-1zM5 16h1v1h-1zM6 16h1v1h-1zM8 16h1v1h-1zM10 16h1v1h-1zM11 16h1v1h-1zM12 16h1v1h-1zM13 16h1v1h-1zM16 16h1v1h-1zM17 16h1v1h-1zM21 16h1v1h-1zM22 16h1v1h-1zM25 16h1v1h-1zM27 16h1v1h-1zM28 16h1v1h-1zM5 17h1v1h-1zM9 17h1v1h-1zM11 17h1v1h-1zM12 17h1v1h-1zM13 17h1v1h-1zM14 17h1v1h-1zM15 17h1v1h-1zM16 17h1v1h-1zM18 17h1v1h-1zM21 17h1v1h-1zM22 17h1v1h-1zM23 17h1v1h-1zM25 17h1v1h-1zM26 17h1v1h-1zM28 17h1v1h-1zM4 18h1v1h-1zM8 18h1v1h-1zM10 18h1v1h-1zM12 18h1v1h-1zM14 18h1v1h-1zM16 18h1v1h-1zM18 18h1v1h-1zM22 18h1v1h-1zM23 18h1v1h-1zM24 18h1v1h-1zM26 18h1v1h-1zM28 18h1v1h-1zM5 19h1v1h-1zM6 19h1v1h-1zM9 19h1v1h-1zM11 19h1v1h-1zM12 19h1v1h-1zM13 19h1v1h-1zM16 19h1v1h-1zM17 19h1v1h-1zM18 19h1v1h-1zM24 19h1v1h-1zM27 19h1v1h-1zM4 20h1v1h-1zM5 20h1v1h-1zM7 20h1v1h-1zM8 20h1v1h-1zM9 20h1v1h-1zM10 20h1v1h-1zM13 20h1v1h-1zM15 20h1v1h-1zM16 20h1v1h-1zM18 20h1v1h-1zM20 20h1v1h-1zM21 20h1v1h-1zM22 20h1v1h-1zM23 20h1v1h-1zM24 20h1v1h-1zM25 20h1v1h-1zM26 20h1v1h-1zM12 21h1v1h-1zM18 21h1v1h-1zM20 21h1v1h-1zM24 21h1v1h-1zM25 21h1v1h-1zM28 21h1v1h-1zM4 22h1v1h-1zM5 22h1v1h-1zM6 22h1v1h-1zM7 22h1v1h-1zM8 22h1v1h-1zM9 22h1v1h-1zM10 22h1v1h-1zM14 22h1v1h-1zM16 22h1v1h-1zM17 22h1v1h-1zM19 22h1v1h-1zM20 22h1v1h-1zM22 22h1v1h-1zM24 22h1v1h-1zM25 22h1v1h-1zM27 22h1v1h-1zM28 22h1v1h-1zM4 23h1v1h-1zM10 23h1v1h-1zM12 23h1v1h-1zM13 23h1v1h-1zM14 23h1v1h-1zM16 23h1v1h-1zM20 23h1v1h-1zM24 23h1v1h-1zM25 23h1v1h-1zM26 23h1v1h-1zM4 24h1v1h-1zM6 24h1v1h-1zM7 24h1v1h-1zM8 24h1v1h-1zM10 24h1v1h-1zM13 24h1v1h-1zM14 24h1v1h-1zM15 24h1v1h-1zM17 24h1v1h-1zM18 24h1v1h-1zM20 24h1v1h-1zM21 24h1v1h-1zM22 24h1v1h-1zM23 24h1v1h-1zM24 24h1v1h-1zM25 24h1v1h-1zM27 24h1v1h-1zM4 25h1v1h-1zM6 25h1v1h-1zM7 25h1v1h-1zM8 25h1v1h-1zM10 25h1v1h-1zM12 25h1v1h-1zM14 25h1v1h-1zM16 25h1v1h-1zM17 25h1v1h-1zM23 25h1v1h-1zM24 25h1v1h-1zM25 25h1v1h-1zM26 25h1v1h-1zM4 26h1v1h-1zM6 26h1v1h-1zM7 26h1v1h-1zM8 26h1v1h-1zM10 26h1v1h-1zM13 26h1v1h-1zM17 26h1v1h-1zM21 26h1v1h-1zM23 26h1v1h-1zM24 26h1v1h-1zM26 26h1v1h-1zM28 26h1v1h-1zM4 27h1v1h-1zM10 27h1v1h-1zM16 27h1v1h-1zM17 27h1v1h-1zM18 27h1v1h-1zM19 27h1v1h-1zM20 27h1v1h-1zM25 27h1v1h-1zM4 28h1v1h-1zM5 28h1v1h-1zM6 28h1v1h-1zM7 28h1v1h-1zM8 28h1v1h-1zM9 28h1v1h-1zM10 28h1v1h-1zM12 28h1v1h-1zM16 28h1v1h-1zM17 28h1v1h-1zM19 28h1v1h-1zM20 28h1v1h-1zM22 28h1v1h-1zM23 28h1v1h-1zM27 28h1v1h-1zM28 28h1v1h-1z" fill="#16202B"/></svg><span>https://feepass.edycu.dev</span></div>
+    <aside class="notes">Thank you. The live app reads mainnet only; the header shows the block height. Questions: the repo README and docs/ARCHITECTURE.md hold the covenant rules and the security properties.</aside>
+    <div class="foot"><span><b>FEEPASS</b> · BCH BLAZE 2026</span><span>v1 · 2026-11-15 · 7 / 7</span></div>
+  </section>
+</main>
+
+<div class="notes-panel" id="notes" aria-live="polite"></div>
+<nav class="ctrl" aria-label="Deck controls">
+  <button type="button" id="prev" aria-label="Previous slide">←</button>
+  <span class="count" id="count">1 / 7</span>
+  <button type="button" id="next" aria-label="Next slide">→</button>
+  <button type="button" id="notesBtn" aria-pressed="false" title="Speaker notes (N)">Notes</button>
+</nav>
+<script>
+(() => {
+  const slides = [...document.querySelectorAll('.slide')];
+  const stage = document.getElementById('stage');
+  const notes = document.getElementById('notes');
+  const count = document.getElementById('count');
+  const bar = document.getElementById('bar');
+  const notesBtn = document.getElementById('notesBtn');
+  let i = 0;
+  function fit() {
+    // clientWidth/Height, not innerWidth: on phones innerWidth reads the zoomed-out layout width and crops the slide.
+    const w = document.documentElement.clientWidth, h = document.documentElement.clientHeight;
+    const s = Math.min(w / 1920, h / 1080);
+    stage.style.transform = `scale(${s}) translate(-50%, -50%)`;
+    stage.style.transformOrigin = '0 0';
+    stage.style.left = '50%'; stage.style.top = '50%';
+  }
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle('on', k === i));
+    count.textContent = `${i + 1} / ${slides.length}`;
+    bar.style.width = `${((i + 1) / slides.length) * 100}%`;
+    const a = slides[i].querySelector('.notes');
+    notes.innerHTML = `<b>${i + 1} · ${slides[i].dataset.title}</b><br>${a ? a.innerHTML : ''}`;
+    if (location.hash !== `#${i + 1}`) history.replaceState(null, '', `#${i + 1}`);
+  }
+  function toggleNotes() {
+    const on = document.body.classList.toggle('show-notes');
+    notesBtn.setAttribute('aria-pressed', String(on));
+  }
+  document.getElementById('prev').addEventListener('click', () => show(i - 1));
+  document.getElementById('next').addEventListener('click', () => show(i + 1));
+  notesBtn.addEventListener('click', toggleNotes);
+  addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); show(i + 1); }
+    else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); show(i - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key === 'n' || e.key === 'N') toggleNotes();
+  });
+  let x0 = null;
+  addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+  addEventListener('touchend', (e) => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) show(i + (dx < 0 ? 1 : -1)); x0 = null; });
+  let sleepT;
+  addEventListener('pointermove', () => { document.body.classList.add('awake'); clearTimeout(sleepT); sleepT = setTimeout(() => document.body.classList.remove('awake'), 2200); });
+  addEventListener('resize', fit);
+  fit();
+  show((parseInt(location.hash.slice(1), 10) || 1) - 1);
+})();
+</script>
+</body>
+</html>
