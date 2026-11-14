@@ -1,0 +1,111 @@
+{
+  "contractName": "FeePassPool",
+  "constructorInputs": [
+    {
+      "name": "ownerPk",
+      "type": "pubkey"
+    },
+    {
+      "name": "pusdCategory",
+      "type": "bytes32"
+    },
+    {
+      "name": "feeTokens",
+      "type": "int"
+    },
+    {
+      "name": "maxSubsidy",
+      "type": "int"
+    },
+    {
+      "name": "maxTopUp",
+      "type": "int"
+    }
+  ],
+  "abi": [
+    {
+      "name": "sponsorPaid",
+      "inputs": []
+    },
+    {
+      "name": "withdraw",
+      "inputs": [
+        {
+          "name": "ownerSig",
+          "type": "sig"
+        }
+      ]
+    }
+  ],
+  "bytecode": "OP_5 OP_PICK OP_0 OP_NUMEQUAL OP_IF OP_TXINPUTCOUNT OP_2 OP_NUMEQUALVERIFY OP_TXOUTPUTCOUNT OP_3 OP_NUMEQUALVERIFY OP_INPUTINDEX OP_1 OP_NUMEQUALVERIFY OP_1 OP_UTXOTOKENCATEGORY OP_2 OP_PICK OP_EQUALVERIFY OP_0 OP_UTXOTOKENCATEGORY OP_2 OP_PICK OP_EQUALVERIFY OP_0 OP_OUTPUTTOKENCATEGORY OP_2 OP_PICK OP_EQUALVERIFY OP_1 OP_OUTPUTTOKENCATEGORY OP_2 OP_PICK OP_EQUALVERIFY OP_2 OP_OUTPUTBYTECODE OP_1 OP_UTXOBYTECODE OP_EQUALVERIFY OP_2 OP_OUTPUTVALUE OP_1 OP_UTXOVALUE OP_5 OP_ROLL OP_SUB OP_GREATERTHANOREQUAL OP_VERIFY OP_2 OP_OUTPUTTOKENCATEGORY OP_ROT OP_EQUALVERIFY OP_2 OP_OUTPUTTOKENAMOUNT OP_1 OP_UTXOTOKENAMOUNT OP_3 OP_ROLL OP_ADD OP_NUMEQUALVERIFY OP_0 OP_OUTPUTVALUE OP_1 OP_OUTPUTVALUE OP_ADD OP_0 OP_UTXOVALUE OP_3 OP_ROLL OP_ADD OP_LESSTHANOREQUAL OP_NIP OP_NIP OP_ELSE OP_5 OP_ROLL OP_1 OP_NUMEQUALVERIFY OP_5 OP_ROLL OP_SWAP OP_CHECKSIGVERIFY OP_2DROP OP_2DROP OP_1 OP_ENDIF",
+  "source": "pragma cashscript ^0.14.0;\n\n// FeePass sponsor pool. One UTXO of this contract is one \"lane\".\n//\n// A user who holds PUSD but no spendable BCH builds a 2-input / 3-output transaction:\n//   in0  the user's PUSD coin (signed by the user's own wallet, SIGHASH_ALL)\n//   in1  one pool lane (this contract, no signature needed)\n//   out0 PUSD to the recipient\n//   out1 PUSD change back to the user\n//   out2 the lane comes back to the pool, minus the miner fee, plus exactly feeTokens PUSD\n//\n// The pool pays the miner fee in sats; the user pays for it in PUSD.\ncontract FeePassPool(\n    pubkey ownerPk,        // operator key: sweep PUSD revenue, re-split lanes\n    bytes32 pusdCategory,  // PUSD token category, internal (unreversed) byte order\n    int feeTokens,         // f: PUSD base units the pool receives per sponsored send\n    int maxSubsidy,        // C: max sats one lane may lose in one transaction\n    int maxTopUp           // T: max sats the user-side outputs may exceed the user input\n) {\n    function sponsorPaid() {\n        // R1 fixed shape: exactly one user input, one pool input, three outputs.\n        require(tx.inputs.length == 2);\n        require(tx.outputs.length == 3);\n        require(this.activeInputIndex == 1);\n\n        // R7 the lane itself holds PUSD (every lane is seeded with PUSD).\n        require(tx.inputs[1].tokenCategory == pusdCategory);\n\n        // R2 the user brings PUSD and sends PUSD.\n        require(tx.inputs[0].tokenCategory == pusdCategory);\n        require(tx.outputs[0].tokenCategory == pusdCategory);\n\n        // R8 the user's change stays a PUSD output, so the top-up cannot leave as plain BCH.\n        require(tx.outputs[1].tokenCategory == pusdCategory);\n\n        // R3 the lane returns to the same covenant.\n        require(tx.outputs[2].lockingBytecode == tx.inputs[1].lockingBytecode);\n\n        // R4 hard per-transaction cap on what the lane can lose.\n        require(tx.outputs[2].value >= tx.inputs[1].value - maxSubsidy);\n\n        // R5 the pool receives exactly feeTokens PUSD: never less, never more.\n        require(tx.outputs[2].tokenCategory == pusdCategory);\n        require(tx.outputs[2].tokenAmount == tx.inputs[1].tokenAmount + feeTokens);\n\n        // R6 the user-side outputs may exceed the user's input sats by at most maxTopUp\n        // (token outputs need dust; the lane may cover at most one dust's worth).\n        require(tx.outputs[0].value + tx.outputs[1].value <= tx.inputs[0].value + maxTopUp);\n    }\n\n    // Operator path: collect PUSD revenue and BCH, re-split lanes.\n    // Custody of the pool only; users' coins are never locked here.\n    function withdraw(sig ownerSig) {\n        require(checkSig(ownerSig, ownerPk));\n    }\n}\n",
+  "fingerprint": "596a8c30c153a08316e4ea6c195a1330e1b00854fc59f1128397fcb8ac07de3a",
+  "debug": {
+    "bytecode": "5579009c63c3529dc4539dc0519d51ce52798800ce52798800d152798851d152798852cd51c78852cc51c6557a94a26952d17b8852d351d0537a939d00cc51cc9300c6537a93a1777767557a519d557a7cad6d6d5168",
+    "sourceMap": "20:4:49:5;;;;;22:16:22:32;:36::37;:8::39:1;23:16:23:33:0;:37::38;:8::40:1;24:16:24:37:0;:41::42;:8::44:1;27:26:27:27:0;:16::42:1;:46::58:0;;:8::60:1;30:26:30:27:0;:16::42:1;:46::58:0;;:8::60:1;31:27:31:28:0;:16::43:1;:47::59:0;;:8::61:1;34:27:34:28:0;:16::43:1;:47::59:0;;:8::61:1;37:27:37:28:0;:16::45:1;:59::60:0;:49::77:1;:8::79;40:27:40:28:0;:16::35:1;:49::50:0;:39::57:1;:60::70:0;;:39:::1;:16;:8::72;43:27:43:28:0;:16::43:1;:47::59:0;:8::61:1;44:27:44:28:0;:16::41:1;:55::56:0;:45::69:1;:72::81:0;;:45:::1;:8::83;48:27:48:28:0;:16::35:1;:49::50:0;:38::57:1;:16;:71::72:0;:61::79:1;:82::90:0;;:61:::1;:8::92;20:27:49:5;;:4;53::55::0;;;;54:25:54:33;;:35::42;:8::45:1;53:36:55:5;;;13:0:56:1",
+    "logs": [],
+    "requires": [
+      {
+        "ip": 12,
+        "line": 22
+      },
+      {
+        "ip": 15,
+        "line": 23
+      },
+      {
+        "ip": 18,
+        "line": 24
+      },
+      {
+        "ip": 23,
+        "line": 27
+      },
+      {
+        "ip": 28,
+        "line": 30
+      },
+      {
+        "ip": 33,
+        "line": 31
+      },
+      {
+        "ip": 38,
+        "line": 34
+      },
+      {
+        "ip": 43,
+        "line": 37
+      },
+      {
+        "ip": 52,
+        "line": 40
+      },
+      {
+        "ip": 56,
+        "line": 43
+      },
+      {
+        "ip": 64,
+        "line": 44
+      },
+      {
+        "ip": 76,
+        "line": 48
+      },
+      {
+        "ip": 86,
+        "line": 54
+      }
+    ],
+    "sourceTags": "71:72:sc"
+  },
+  "compiler": {
+    "name": "cashc",
+    "version": "0.14.0",
+    "options": {
+      "enforceFunctionParameterTypes": true,
+      "enforceLocktimeGuard": true
+    }
+  }
+}

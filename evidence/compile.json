@@ -1,0 +1,24 @@
+{
+  "contract": "FeePassPool",
+  "compiler": {
+    "name": "cashc",
+    "version": "0.14.0",
+    "options": {
+      "enforceFunctionParameterTypes": true,
+      "enforceLocktimeGuard": true
+    }
+  },
+  "abi": [
+    "sponsorPaid()",
+    "withdraw(sig ownerSig)"
+  ],
+  "constructorInputs": [
+    "pubkey ownerPk",
+    "bytes32 pusdCategory",
+    "int feeTokens",
+    "int maxSubsidy",
+    "int maxTopUp"
+  ],
+  "bytecodeAsmTokens": 86,
+  "artifactSha256": "5ece3a4e549059a058785466c6be18b3d55151a5ed91c91d66351a674f14a52a"
+}

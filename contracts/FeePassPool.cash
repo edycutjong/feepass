@@ -1,0 +1,56 @@
+pragma cashscript ^0.14.0;
+
+// FeePass sponsor pool. One UTXO of this contract is one "lane".
+//
+// A user who holds PUSD but no spendable BCH builds a 2-input / 3-output transaction:
+//   in0  the user's PUSD coin (signed by the user's own wallet, SIGHASH_ALL)
+//   in1  one pool lane (this contract, no signature needed)
+//   out0 PUSD to the recipient
+//   out1 PUSD change back to the user
+//   out2 the lane comes back to the pool, minus the miner fee, plus exactly feeTokens PUSD
+//
+// The pool pays the miner fee in sats; the user pays for it in PUSD.
+contract FeePassPool(
+    pubkey ownerPk,        // operator key: sweep PUSD revenue, re-split lanes
+    bytes32 pusdCategory,  // PUSD token category, internal (unreversed) byte order
+    int feeTokens,         // f: PUSD base units the pool receives per sponsored send
+    int maxSubsidy,        // C: max sats one lane may lose in one transaction
+    int maxTopUp           // T: max sats the user-side outputs may exceed the user input
+) {
+    function sponsorPaid() {
+        // R1 fixed shape: exactly one user input, one pool input, three outputs.
+        require(tx.inputs.length == 2);
+        require(tx.outputs.length == 3);
+        require(this.activeInputIndex == 1);
+
+        // R7 the lane itself holds PUSD (every lane is seeded with PUSD).
+        require(tx.inputs[1].tokenCategory == pusdCategory);
+
+        // R2 the user brings PUSD and sends PUSD.
+        require(tx.inputs[0].tokenCategory == pusdCategory);
+        require(tx.outputs[0].tokenCategory == pusdCategory);
+
+        // R8 the user's change stays a PUSD output, so the top-up cannot leave as plain BCH.
+        require(tx.outputs[1].tokenCategory == pusdCategory);
+
+        // R3 the lane returns to the same covenant.
+        require(tx.outputs[2].lockingBytecode == tx.inputs[1].lockingBytecode);
+
+        // R4 hard per-transaction cap on what the lane can lose.
+        require(tx.outputs[2].value >= tx.inputs[1].value - maxSubsidy);
+
+        // R5 the pool receives exactly feeTokens PUSD: never less, never more.
+        require(tx.outputs[2].tokenCategory == pusdCategory);
+        require(tx.outputs[2].tokenAmount == tx.inputs[1].tokenAmount + feeTokens);
+
+        // R6 the user-side outputs may exceed the user's input sats by at most maxTopUp
+        // (token outputs need dust; the lane may cover at most one dust's worth).
+        require(tx.outputs[0].value + tx.outputs[1].value <= tx.inputs[0].value + maxTopUp);
+    }
+
+    // Operator path: collect PUSD revenue and BCH, re-split lanes.
+    // Custody of the pool only; users' coins are never locked here.
+    function withdraw(sig ownerSig) {
+        require(checkSig(ownerSig, ownerPk));
+    }
+}
