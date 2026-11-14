@@ -5,6 +5,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { WizardConnectQRDialog } from '@paytaca/wizardconnect-vue';
 import { config } from '../core/config';
 import { formatUnits } from '../core/amounts';
+import { STARTER_DEFAULTS } from '../core/starter';
 import { useFeePass } from './useFeePass';
 import AppHeader from './AppHeader.vue';
 import LaneBoard from './LaneBoard.vue';
@@ -18,6 +19,8 @@ const { wc } = fp;
 const isPool = typeof location !== 'undefined' && location.pathname.replace(/\/+$/, '') === '/pool';
 const showQr = ref(false);
 const fee = formatUnits(config.params.feeTokens, config.decimals);
+const starterAmount = formatUnits(STARTER_DEFAULTS.claimUnits, config.decimals);
+const starterCap = STARTER_DEFAULTS.dailyCap;
 const busy = computed(() => fp.resuming.value || !['idle', 'done'].includes(fp.phase.value));
 const chosenNumber = computed(() => fp.board.value?.lanes.find((l) => l.outpoint === fp.activeLane.value)?.number ?? null);
 
@@ -81,6 +84,14 @@ const bch = (s: bigint | null) => (s === null ? 'unknown' : (Number(s) / 1e8).to
           {{ fp.wallet.value.failedLookups }} of {{ fp.wallet.value.lookups }} address lookups failed; spendable BCH is unknown until a rescan succeeds.</p>
         <p v-if="fp.wallet.value && fp.wallet.value.coins.length === 0 && !fp.wallet.value.failedLookups" class="nopusd">
           ✕ No PUSD found on mainnet in the addresses this wallet shared. <span class="muted">Is your wallet set to mainnet?</span></p>
+        <div v-if="fp.wallet.value && fp.wallet.value.coins.length === 0 && !fp.wallet.value.failedLookups" class="starter" data-testid="starter">
+          <p class="small">New to PUSD? Take <strong>{{ starterAmount }} PUSD</strong> from the FeePass faucet, once per address, to try one send. It is a small shared budget:
+            {{ starterCap }} claims per UTC day, so it can run out.</p>
+          <button type="button" class="btn" data-testid="starter-claim" :disabled="fp.starter.value.state === 'claiming' || fp.starter.value.state === 'waiting'"
+            @click="fp.claimStarterPusd()">{{ fp.starter.value.state === 'claiming' ? 'Asking the faucet…' : fp.starter.value.state === 'waiting' ? 'Waiting for the coin…' : `Get ${starterAmount} starter PUSD` }}</button>
+          <p v-if="fp.starter.value.state === 'error'" class="small starter-err" role="alert" :data-code="fp.starter.value.code">✕ {{ fp.starter.value.message }}</p>
+          <p v-if="fp.starter.value.txid" class="small data">Faucet tx <a :href="config.explorerTx + fp.starter.value.txid" target="_blank" rel="noopener">{{ fp.starter.value.txid.slice(0, 10) }}…</a></p>
+        </div>
         <button type="button" class="linkbtn" :disabled="fp.scanning.value" @click="fp.scan()">{{ fp.scanning.value ? 'Reading mainnet…' : 'Rescan' }}</button>
       </section>
 
@@ -135,4 +146,6 @@ const bch = (s: bigint | null) => (s === null ? 'unknown' : (Number(s) / 1e8).to
 .how h2 { font-size: 32px; }
 .how ol { padding-left: 22px; }
 @media (max-width: 480px) { .hero h1 { font-size: 40px; } .bal .big { font-size: 30px; } }
+.starter { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rule); display: grid; gap: 8px; justify-items: start; }
+.starter-err { color: var(--ink); margin: 0; }
 </style>

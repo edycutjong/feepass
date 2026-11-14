@@ -125,6 +125,38 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
     }
   }
 
+  // Starter PUSD: one POST to the faucet route for the wallet's first receive address, then rescan until the coin shows
+  // (mempool coins count). The server's answers are shown as they are: a limit is a limit, never a network diagnosis.
+  const starter = shallowRef<{ state: 'idle' | 'claiming' | 'waiting' | 'sent' | 'error'; message: string; txid: string | null; code: string }>(
+    { state: 'idle', message: '', txid: null, code: '' },
+  );
+  async function claimStarterPusd(fetcher: typeof fetch = fetch, pollMs = 4000) {
+    if (starter.value.state === 'claiming' || starter.value.state === 'waiting') return;
+    const addrs = addresses();
+    const first = addrs.find((a) => a.pathName === 'receive' && a.addressIndex === 0) ?? addrs[0];
+    if (!first) { starter.value = { state: 'error', message: 'Connect a wallet first.', txid: null, code: 'NO_WALLET' }; return; }
+    starter.value = { state: 'claiming', message: '', txid: null, code: '' };
+    let body: { txid?: string; error?: string; code?: string } = {};
+    try {
+      const r = await fetcher('/api/feepass?op=starter', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ address: first.tokenAddress }) });
+      body = await r.json().catch(() => ({}));
+      if (!r.ok || !body.txid) {
+        starter.value = { state: 'error', message: body.error ?? 'The faucet did not answer. Try again in a minute.', txid: null, code: body.code ?? `HTTP_${r.status}` };
+        return;
+      }
+    } catch {
+      starter.value = { state: 'error', message: 'Could not reach the faucet. Check your connection and try again.', txid: null, code: 'NETWORK' };
+      return;
+    }
+    starter.value = { state: 'waiting', message: '', txid: body.txid, code: '' };
+    for (let i = 0; i < 8; i++) {
+      await new Promise((res) => setTimeout(res, pollMs));
+      const w = await scan();
+      if (w && w.coins.length) break;
+    }
+    starter.value = { state: 'sent', message: '', txid: body.txid, code: '' };
+  }
+
   watch(connected, async (c) => {
     if (c) await scan();
     else wallet.value = null;
@@ -335,6 +367,6 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
   return {
     wc, connected, provider, pool, height, chainError, board, boardError, wallet, scanning, maxUnits, resuming, resending,
     phase, activeLane, chosenLane, signingSend, waitSeconds, signatures, retryReason, notice, ticket, ticketLane, ticketAt, sentTxid, pending,
-    refreshChain, refreshBoard, scan, send, resumePending, resendPending, startOver,
+    refreshChain, refreshBoard, scan, starter, claimStarterPusd, send, resumePending, resendPending, startOver,
   };
 }

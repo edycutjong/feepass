@@ -279,4 +279,36 @@ describe('useFeePass', () => {
     store.clear('a'.repeat(64));
     expect(store.load()).toBeNull();
   });
+  it('starter claim: posts the first receive address, then rescans until the coin shows', async () => {
+    const fp = useFeePass({ store: memoryStore() });
+    await fp.scan();
+    expect(fp.wallet.value!.coins).toHaveLength(0);
+    const calls: { url: string; body: any }[] = [];
+    const fetcher = (async (url: string, init: RequestInit) => {
+      calls.push({ url, body: JSON.parse(String(init.body)) });
+      h.chain.addUtxo(me.tokenAddress, randomUtxo({ satoshis: 1400n, token: { category: config.categoryDisplay, amount: 25n } })); // the faucet's coin lands in the mempool
+      return new Response(JSON.stringify({ txid: 'ab'.repeat(32), units: 25 }), { status: 200 });
+    }) as unknown as typeof fetch;
+    await fp.claimStarterPusd(fetcher, 1);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe('/api/feepass?op=starter');
+    expect(calls[0]!.body.address).toBe(me.tokenAddress);
+    expect(fp.starter.value).toMatchObject({ state: 'sent', txid: 'ab'.repeat(32) });
+    expect(fp.wallet.value!.pusdUnits).toBe(25n);
+  });
+
+  it('starter claim: the server’s refusal is shown as it is (code kept); a network failure is named; no repeat while one is running', async () => {
+    const fp = useFeePass({ store: memoryStore() });
+    await fp.scan();
+    const refuse = (async () => new Response(JSON.stringify({ error: 'This address already claimed its starter PUSD.', code: 'ALREADY_CLAIMED' }), { status: 409 })) as unknown as typeof fetch;
+    await fp.claimStarterPusd(refuse, 1);
+    expect(fp.starter.value).toMatchObject({ state: 'error', code: 'ALREADY_CLAIMED', message: 'This address already claimed its starter PUSD.' });
+    const down = (async () => { throw new TypeError('fetch failed'); }) as unknown as typeof fetch;
+    await fp.claimStarterPusd(down, 1);
+    expect(fp.starter.value).toMatchObject({ state: 'error', code: 'NETWORK' });
+    let n = 0;
+    const slow = (async () => { n++; await new Promise((r) => setTimeout(r, 20)); return new Response('{}', { status: 503 }); }) as unknown as typeof fetch;
+    await Promise.all([fp.claimStarterPusd(slow, 1), fp.claimStarterPusd(slow, 1)]);
+    expect(n).toBe(1);
+  });
 });

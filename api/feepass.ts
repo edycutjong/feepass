@@ -1,0 +1,65 @@
+// FeePass's one serverless function: the starter-PUSD faucet claim and a health read. Everything else is static.
+// The faucet key comes from the FAUCET_WIF environment variable (never from the repo). The logic lives in
+// src/server/feepassApi.ts and src/core/starter.ts, both unit-tested offline.
+import { binToHex, decodePrivateKeyWif, encodeCashAddress, hash160, hexToBin, secp256k1, sha256 } from '@bitauth/libauth';
+import { ElectrumNetworkProvider } from 'cashscript';
+import { handle, IpLimiter, type ApiDeps } from '../src/server/feepassApi';
+import { STARTER_DEFAULTS, type FaucetChain } from '../src/core/starter';
+import { buildBoard } from '../src/core/lanes';
+import { lockingBytecodeOf } from '../src/core/dust';
+import { appPool, config as cfg } from '../src/core/config';
+
+class ServerChain extends ElectrumNetworkProvider implements FaucetChain {
+  constructor() { super('mainnet'); }
+  async history(address: string) {
+    const scripthash = binToHex(sha256.hash(lockingBytecodeOf(address)).reverse());
+    const r = await this.performRequest('blockchain.scripthash.get_history', scripthash);
+    if (r instanceof Error) throw r;
+    return (r as { tx_hash: string; height: number }[]).map((e) => ({ txid: e.tx_hash, height: e.height }));
+  }
+  async tipHeight() { return this.getBlockHeight(); }
+  async blockTime(height: number) {
+    const r = await this.performRequest('blockchain.block.header', height);
+    if (r instanceof Error) throw r;
+    const h = hexToBin(String(r));
+    return new DataView(h.buffer, h.byteOffset).getUint32(68, true);
+  }
+}
+
+const limiter = new IpLimiter();
+
+function deps(): ApiDeps {
+  const wif = process.env.FAUCET_WIF;
+  if (!wif) throw new Error('FAUCET_WIF is not set');
+  const d = decodePrivateKeyWif(wif);
+  if (typeof d === 'string') throw new Error('FAUCET_WIF is not a valid WIF');
+  const pub = secp256k1.derivePublicKeyCompressed(d.privateKey) as Uint8Array;
+  const pkh = hash160(pub);
+  const chain = new ServerChain();
+  return {
+    chain,
+    starter: {
+      category: cfg.categoryDisplay,
+      faucetPriv: d.privateKey,
+      faucetPub: pub,
+      faucetAddress: encodeCashAddress({ prefix: 'bitcoincash', type: 'p2pkh', payload: pkh }).address,
+      faucetTokenAddress: encodeCashAddress({ prefix: 'bitcoincash', type: 'p2pkhWithTokens', payload: pkh }).address,
+      ...STARTER_DEFAULTS,
+    },
+    board: async () => {
+      const pool = appPool(cfg, chain);
+      return buildBoard(await chain.getUtxos(pool.tokenAddress), { categoryDisplay: cfg.categoryDisplay, laneLock: lockingBytecodeOf(pool.tokenAddress), params: cfg.params, n: cfg.lanes });
+    },
+  };
+}
+
+export default {
+  async fetch(request: Request): Promise<Response> {
+    try {
+      return await handle(request, deps(), limiter);
+    } catch {
+      // never echo internals (the message could name the key file or env)
+      return new Response(JSON.stringify({ error: 'The faucet is not configured.', code: 'UNCONFIGURED' }), { status: 503, headers: { 'content-type': 'application/json' } });
+    }
+  },
+};
