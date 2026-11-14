@@ -30,7 +30,7 @@ const same = (a: Uint8Array, b: Uint8Array) => binToHex(a) === binToHex(b);
 export function computeTicket(o: {
   txid: string;
   hex: string;
-  proposed: Pick<WcTransactionObject, 'sourceOutputs'>;
+  proposed: Pick<WcTransactionObject, 'sourceOutputs' | 'transaction'>;
   categoryDisplay: string;
   userLock: Uint8Array;
   poolLock: Uint8Array;
@@ -41,6 +41,13 @@ export function computeTicket(o: {
   if (typeof tx === 'string') throw new TicketError(`undecodable transaction: ${tx}`);
   const src = o.proposed.sourceOutputs as unknown as Output[];
   if (src.length !== tx.inputs.length) throw new TicketError('source outputs do not match the inputs');
+  // The source outputs must describe THESE inputs: same outpoints as the proposed transaction they came with.
+  const want = o.proposed.transaction.inputs;
+  tx.inputs.forEach((inp, k) => {
+    const w = want[k];
+    if (!w || binToHex(inp.outpointTransactionHash) !== binToHex(w.outpointTransactionHash) || inp.outpointIndex !== w.outpointIndex)
+      throw new TicketError(`input ${k} is not the proposed outpoint`);
+  });
   const cat = o.categoryDisplay;
   const isPusd = (x: Output | undefined) => !!x?.token && binToHex(x.token.category) === cat && !x.token.nft;
   const in0 = src[0], in1 = src[1];

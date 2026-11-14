@@ -18,6 +18,8 @@ export type FlowErrorCode =
   | 'POOL_EMPTY'
   | 'POOL_BUSY'
   | 'WALLET_REJECTED'
+  | 'RELAY_TIMEOUT'
+  | 'SEND_IN_PROGRESS'
   | 'NONCONFORMANT_SIGHASH'
   | 'WALLET_CHANGED_TX'
   | 'COIN_CHANGED'
@@ -46,6 +48,14 @@ export interface PendingSend {
 
 export const PENDING_TTL_MS = 30 * 60 * 1000;
 
+/** Thrown by a signer that got no answer from the wallet in time; the session (and its QR) stays valid for a retry. */
+export class RelayTimeoutError extends Error {
+  constructor(message = 'No answer from the wallet in time.') {
+    super(message);
+    this.name = 'RelayTimeoutError';
+  }
+}
+
 export interface PendingStore {
   load(): PendingSend | null;
   save(p: PendingSend): void;
@@ -68,7 +78,7 @@ export type FlowEvent =
   | { stage: 'signing'; lane: Lane; attempt: number; send: SponsoredSend }
   | { stage: 'broadcasting'; lane: Lane; txid: string }
   | { stage: 'waiting-lane'; lane: Lane; secondsLeft: number }
-  | { stage: 'retrying'; lane: Lane; reason: string; attempt: number };
+  | { stage: 'retrying'; lane: Lane; reason: 'lane-conflict' | 'lane-rejected' | 'lane-missing'; attempt: number };
 
 export interface FlowDeps {
   pool: Contract<any, any, 'p2sh32'>;
@@ -136,6 +146,8 @@ export async function runSend(d: FlowDeps, r: SendRequest): Promise<SendSuccess>
   const sleep = d.sleep ?? defaultSleep;
   const now = d.now ?? Date.now;
   const store = d.store ?? memoryStore();
+  // One send per coin at a time, across tabs: a stored record means a signed version may be in flight.
+  if (store.load()) throw new FlowError('SEND_IN_PROGRESS', 'A send from this browser is still pending. Resolve it first (re-send the same transaction or start over).');
   if (r.coins.length === 0) throw new FlowError('NO_COIN', 'None of your PUSD coins can carry this amount plus the fee and 0.01 PUSD change.');
   const excluded = new Set<string>();
   let coin: UserCoin | undefined;
@@ -184,6 +196,7 @@ export async function runSend(d: FlowDeps, r: SendRequest): Promise<SendSuccess>
     try {
       signedHex = await d.sign(req);
     } catch (e) {
+      if (e instanceof RelayTimeoutError) throw new FlowError('RELAY_TIMEOUT', `${e.message} Nothing was sent; press Send to ask again (the wallet stays connected).`);
       throw new FlowError('WALLET_REJECTED', `The wallet did not sign: ${errText(e)}. Nothing was sent.`);
     }
     let verified: VerifiedTx;
@@ -207,7 +220,7 @@ export async function runSend(d: FlowDeps, r: SendRequest): Promise<SendSuccess>
     }
     if (outcome === 'coin-changed') {
       store.clear();
-      throw new FlowError('COIN_CHANGED', 'Your PUSD coin was spent elsewhere while this send was pending. Nothing more was signed.');
+      throw new FlowError('COIN_CHANGED', 'Your PUSD coin was spent by another transaction while this send was pending. Nothing more was signed.');
     }
     if (outcome === 'unknown') throw new FlowError('BROADCAST_UNKNOWN', 'The server did not answer. The same signed bytes can be re-sent safely.', pending);
 
@@ -215,7 +228,7 @@ export async function runSend(d: FlowDeps, r: SendRequest): Promise<SendSuccess>
     store.clear();
     excluded.add(lane.outpoint);
     if (signatures > maxResigns) throw new FlowError('POOL_BUSY', 'Pool busy: try again in a minute.');
-    d.onEvent?.({ stage: 'retrying', lane, reason: outcome, attempt: signatures });
+    d.onEvent?.({ stage: 'retrying', lane, reason: outcome as 'lane-conflict' | 'lane-rejected' | 'lane-missing', attempt: signatures });
     board = await readBoard(d, excluded);
     d.onEvent?.({ stage: 'lanes', board });
   }
@@ -246,12 +259,21 @@ async function broadcastOnce(d: FlowDeps, p: PendingSend, lane: Lane, sleep: (ms
     }
     if (!mine) return 'coin-changed';
     if (failure === 'conflict') return 'lane-conflict';
-    // missing inputs with our coin intact → the lane's unconfirmed parent may still be propagating
+    // Missing inputs with our coin intact: if the server already sees the lane spent, it was taken; otherwise its
+    // unconfirmed parent may still be propagating, so wait (ticking each second) and re-send the same bytes every 5 s.
     if (waited >= waitMs) return 'lane-missing';
-    const step = Math.min(5_000, waitMs - waited);
-    d.onEvent?.({ stage: 'waiting-lane', lane, secondsLeft: Math.ceil((waitMs - waited) / 1000) });
-    await sleep(step);
-    waited += step;
+    try {
+      const poolUtxos = await d.provider.getUtxos(d.pool.tokenAddress);
+      if (poolUtxos.length > 0 && !poolUtxos.some((u) => outpointOf(u) === lane.outpoint)) return 'lane-conflict';
+    } catch {
+      /* cannot tell: keep waiting */
+    }
+    const until = Math.min(waited + 5_000, waitMs);
+    while (waited < until) {
+      d.onEvent?.({ stage: 'waiting-lane', lane, secondsLeft: Math.ceil((waitMs - waited) / 1000) });
+      await sleep(1_000);
+      waited += 1_000;
+    }
   }
 }
 

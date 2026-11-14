@@ -5,7 +5,7 @@ import { binToHex, decodeTransaction, encodeTransaction, hexToBin } from '@bitau
 import { signWcTransaction } from '../src/core/headlessSigner';
 import { lockingBytecodeOf } from '../src/core/dust';
 import {
-  checkPending, classifyBroadcastError, FlowError, memoryStore, proposedFromPending, rebroadcast, runSend,
+  RelayTimeoutError, checkPending, classifyBroadcastError, FlowError, memoryStore, proposedFromPending, rebroadcast, runSend,
   type FlowDeps, type FlowEvent, type FlowProvider,
 } from '../src/core/sendFlow';
 import { computeTicket } from '../src/core/receipt';
@@ -16,7 +16,7 @@ import { setup, CAT, pusd } from './helpers';
 type S = ReturnType<typeof setup>;
 const owner = (s: S) => ({ pathName: 'receive', addressIndex: 0, address: s.user.address, tokenAddress: s.user.tokenAddress });
 
-function rig(s: S, o: { failures?: string[]; sighash?: number; tamper?: boolean; reject?: boolean; onSend?: () => void } = {}) {
+function rig(s: S, o: { failures?: string[]; sighash?: number; tamper?: boolean; reject?: boolean | Error; onSend?: () => void } = {}) {
   const failures = [...(o.failures ?? [])];
   const sent: string[] = [];
   const signedIn0: string[] = [];
@@ -37,7 +37,7 @@ function rig(s: S, o: { failures?: string[]; sighash?: number; tamper?: boolean;
     pool: s.pool, params: s.params, categoryDisplay: CAT, lanesShown: 20, provider, store,
     sleep: async () => {}, onEvent: (e) => events.push(e),
     async sign(req: WizardSignRequest) {
-      if (o.reject) throw new Error('User rejected');
+      if (o.reject) throw o.reject instanceof Error ? o.reject : new Error('User rejected');
       const t = req.proposed.transaction;
       signedIn0.push(`${binToHex(t.inputs[0]!.outpointTransactionHash)}:${t.inputs[0]!.outpointIndex}`);
       let hex = signWcTransaction(req.wire, new Map([[0, s.user.priv]]), o.sighash);
@@ -130,7 +130,8 @@ describe('runSend (mock chain, conforming signer)', () => {
     const r = rig(s, { failures: ['bad-txns-inputs-missingorspent', 'Missing inputs'] });
     const out = await runSend(r.deps, { coins: await coins(s), recipient: s.payee.tokenAddress, amount: 10n });
     expect(out.signatures).toBe(1);
-    expect(r.events.filter((e) => e.stage === 'waiting-lane')).toHaveLength(2);
+    const ticks = r.events.filter((e) => e.stage === 'waiting-lane').map((e) => (e as { secondsLeft: number }).secondsLeft);
+    expect(ticks).toEqual([20, 19, 18, 17, 16, 15, 14, 13, 12, 11]); // one tick per second, same bytes re-sent every 5 s
   });
 
   it('missing inputs past the 20 s wait → another lane', async () => {
@@ -227,6 +228,88 @@ describe('runSend (mock chain, conforming signer)', () => {
     s.addLane();
     const r = rig(s);
     await expect(runSend(r.deps, { coins: [], recipient: s.payee.tokenAddress, amount: 10n })).rejects.toMatchObject({ code: 'NO_COIN' });
+  });
+});
+
+describe('runSend recovery branches (round-1 QA additions)', () => {
+  const lanes = (s: S, n: number) => { for (let i = 0; i < n; i++) s.addLane(100_000n + BigInt(i)); };
+  it('script rejection → lane excluded, record cleared, one more signature on another lane', async () => {
+    const s = setup(); lanes(s, 5); s.addUserCoin(100n, 1000n);
+    const r = rig(s, { failures: ['mandatory-script-verify-flag-failed (Script failed an OP_VERIFY operation)'] });
+    const out = await runSend(r.deps, { coins: await coins(s), recipient: s.payee.tokenAddress, amount: 10n });
+    expect(out.signatures).toBe(2);
+    const retry = r.events.find((e) => e.stage === 'retrying') as { reason: string };
+    expect(retry.reason).toBe('lane-rejected');
+  });
+  it('already-known counts as success', async () => {
+    const s = setup(); lanes(s, 1); s.addUserCoin(100n, 1000n);
+    const r = rig(s, { failures: ['txn-already-known'] });
+    const out = await runSend(r.deps, { coins: await coins(s), recipient: s.payee.tokenAddress, amount: 10n });
+    expect(out.signatures).toBe(1);
+  });
+  it('the pending record is written BEFORE the first broadcast', async () => {
+    const s = setup(); lanes(s, 1); s.addUserCoin(100n, 1000n);
+    let seen: unknown = 'not called';
+    const r = rig(s, { onSend: () => { seen = r.store.load(); } });
+    const out = await runSend(r.deps, { coins: await coins(s), recipient: s.payee.tokenAddress, amount: 10n });
+    expect((seen as { txid: string }).txid).toBe(out.txid);
+  });
+  it('an existing pending record blocks a second send (second tab / double click) without asking the wallet', async () => {
+    const s = setup(); lanes(s, 2); s.addUserCoin(100n, 1000n);
+    const r = rig(s, { failures: ['socket closed'] });
+    await runSend(r.deps, { coins: await coins(s), recipient: s.payee.tokenAddress, amount: 10n }).catch(() => {});
+    const signs = r.signedIn0.length;
+    await expect(runSend(r.deps, { coins: await coins(s), recipient: s.payee.tokenAddress, amount: 10n })).rejects.toMatchObject({ code: 'SEND_IN_PROGRESS' });
+    expect(r.signedIn0.length).toBe(signs);
+  });
+  it('with several coins, every re-sign keeps the in0 chosen first', async () => {
+    const s = setup(); lanes(s, 6); s.addUserCoin(100n, 1000n); s.addUserCoin(90n, 1200n); s.addUserCoin(80n, 1100n);
+    const c = 'txn-mempool-conflict';
+    const r = rig(s, { failures: [c, c] });
+    await runSend(r.deps, { coins: await coins(s), recipient: s.payee.tokenAddress, amount: 10n });
+    expect(r.signedIn0).toHaveLength(3);
+    expect(new Set(r.signedIn0).size).toBe(1);
+  });
+  it('missing inputs while the server already sees the lane spent → another lane at once, no 20 s wait', async () => {
+    const s = setup(); s.addLane(100_000n); s.addLane(100_001n); s.addUserCoin(100n, 1000n);
+    let first = true;
+    const r = rig(s, { failures: ['Missing inputs'], onSend: () => {
+      if (!first) return; first = false;
+      const pu = (s.provider as any).utxoSet as [string, { txid: string; satoshis: bigint }][];
+      const lock = binToHex(lockingBytecodeOf(s.pool.tokenAddress));
+      const lanesNow = pu.filter(([k]) => k === lock);
+      // remove the lane the flow is about to use (the one in the pending record)
+      const used = r.store.load()!.laneOutpoint.split(':')[0];
+      (s.provider as any).utxoSet = pu.filter(([k, u]) => !(k === lock && u.txid === used));
+      void lanesNow;
+    } });
+    const out = await runSend(r.deps, { coins: await coins(s), recipient: s.payee.tokenAddress, amount: 10n });
+    expect(out.signatures).toBe(2);
+    expect(r.events.some((e) => e.stage === 'waiting-lane')).toBe(false);
+  });
+  it('relay timeout → RELAY_TIMEOUT (distinct from a refusal), nothing broadcast', async () => {
+    const s = setup(); lanes(s, 1); s.addUserCoin(100n, 1000n);
+    const r = rig(s, { reject: new RelayTimeoutError() });
+    await expect(runSend(r.deps, { coins: await coins(s), recipient: s.payee.tokenAddress, amount: 10n })).rejects.toMatchObject({ code: 'RELAY_TIMEOUT' });
+    expect(r.sent).toHaveLength(0);
+  });
+  it('checkPending → superseded when another tx spent the coin; rebroadcast reports the rejection', async () => {
+    const s = setup(); lanes(s, 1); const coin = s.addUserCoin(100n, 1000n);
+    const r = rig(s, { failures: ['socket closed'] });
+    await runSend(r.deps, { coins: await coins(s), recipient: s.payee.tokenAddress, amount: 10n }).catch(() => {});
+    const rec = r.store.load()!;
+    (s.provider as any).utxoSet = (s.provider as any).utxoSet.filter(([, u]: any) => u.txid !== coin.txid);
+    expect(await checkPending(r.deps.provider, rec)).toBe('superseded');
+    const failing: FlowProvider = { ...r.deps.provider, sendRawTransaction: async () => { throw new Error('txn-mempool-conflict'); } };
+    expect(await rebroadcast(failing, rec)).toBe('conflict');
+  });
+  it('ticket refuses source outputs that do not belong to the tx inputs', async () => {
+    const s = setup(); lanes(s, 2); s.addUserCoin(100n, 1000n); s.addUserCoin(100n, 1000n);
+    const r = rig(s);
+    const a = await runSend(r.deps, { coins: await coins(s), recipient: s.payee.tokenAddress, amount: 10n });
+    const r2 = rig(s);
+    const b = await runSend(r2.deps, { coins: await coins(s), recipient: s.payee.tokenAddress, amount: 10n });
+    expect(() => computeTicket({ txid: a.txid, hex: a.hex, proposed: b.proposed, categoryDisplay: CAT, userLock: lockingBytecodeOf(s.user.tokenAddress), poolLock: lockingBytecodeOf(s.pool.tokenAddress), spendableBefore: 0n, spendableAfter: 0n })).toThrow(/proposed outpoint/);
   });
 });
 
