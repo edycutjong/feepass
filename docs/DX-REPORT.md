@@ -27,5 +27,9 @@ Friction found while building FeePass, written as it happened. Dates are UTC.
   hot wallet's chipnet run waits for a person to request coins.
 - **Verify the wallet's signature before broadcasting, not just its shape.** Checking the sighash byte and the public key
   is not enough: a malformed signature with the right key would pass. `verifySignedTx` now runs the whole signed tx
-  through libauth's BCH 2025 VM (standard rules) against the proposed source outputs, which checks the user's signature
-  and every covenant rule locally.
+  through libauth's BCH 2026 VM (standard rules, the rules mainnet runs since May 2026) against the proposed source
+  outputs, which checks the user's signature and every covenant rule locally.
+- **…but only the inputs the request actually completes.** Our first VM check also evaluated the merchant input of the
+  wallet-check shape (b), which still carries a placeholder, so every shape-(b) signature would have read as a failure.
+  `verifySignedTx` takes the input indexes to evaluate; the sponsored send checks all of them, shape (b) only input 0.
+  `test/shapes.test.ts` runs both shapes through the verifier.
