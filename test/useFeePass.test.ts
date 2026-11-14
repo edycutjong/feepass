@@ -8,7 +8,11 @@ const h = vi.hoisted(() => ({ chain: null as any, manager: null as any, signCall
 
 vi.mock('cashscript', async (orig) => {
   const m = await orig<typeof import('cashscript')>();
-  class MainnetMock extends m.MockNetworkProvider { constructor() { super(); (this as any).network = 'mainnet'; } }
+  class MainnetMock extends m.MockNetworkProvider {
+    constructor() { super(); (this as any).network = 'mainnet'; }
+    // Fulcrum throws for an unknown txid (the plain mock returns undefined): answer like the real server.
+    async getRawTransaction(txid: string) { const r = await super.getRawTransaction(txid); if (!r) throw new Error('No such mempool or blockchain transaction. Use gettransaction for wallet transactions.'); return r; }
+  }
   return { ...m, ElectrumNetworkProvider: class { constructor() { if (!h.chain) h.chain = new MainnetMock(); return h.chain; } } };
 });
 vi.mock('@paytaca/wizardconnect-vue', async () => {
@@ -192,5 +196,87 @@ describe('useFeePass', () => {
     await fp.resendPending();
     expect(fp.notice.value!.message).toMatch(/rejected that version \(fee\)/);
     expect(fp.notice.value!.message).not.toMatch(/taken/);
+  });
+
+  it('a record older than an hour whose tx landed still shows its ticket (the chain is asked first)', async () => {
+    const store = memoryStore();
+    const fp = useFeePass({ store });
+    fund(fp);
+    await fp.resumePending();
+    await fp.scan();
+    const real = h.chain.sendRawTransaction.bind(h.chain);
+    h.chain.sendRawTransaction = async (hex: string) => { await real(hex); throw new Error('socket closed'); };
+    await fp.send(config.demoRecipient, 10n);
+    h.chain.sendRawTransaction = real;
+    store.save({ ...store.load()!, startedAt: Date.now() - 61 * 60_000 });
+    const later = useFeePass({ store });
+    await later.resumePending();
+    expect(later.ticket.value).not.toBeNull();
+    expect(store.load()).toBeNull();
+  });
+
+  it('an expired record that never landed is discarded with a notice, not silently', async () => {
+    const store = memoryStore();
+    const fp = useFeePass({ store });
+    fund(fp);
+    await fp.resumePending();
+    await fp.scan();
+    h.chain.sendRawTransaction = async () => { throw new Error('socket closed'); };
+    await fp.send(config.demoRecipient, 10n);
+    store.save({ ...store.load()!, startedAt: Date.now() - 31 * 60_000 });
+    const later = useFeePass({ store });
+    await later.resumePending();
+    expect(later.notice.value!.code).toBe('DISCARDED');
+    expect(store.load()).toBeNull();
+  });
+
+  it('while tab A waits on the wallet, tab B cannot ask for a second signature (signing lock)', async () => {
+    const store = memoryStore();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const sign0 = h.manager.signTransaction;
+    h.manager.signTransaction = async (x: unknown) => { await gate; return sign0(x); };
+    const tabA = useFeePass({ store });
+    fund(tabA);
+    await tabA.resumePending();
+    await tabA.scan();
+    const a = tabA.send(config.demoRecipient, 10n);
+    for (let i = 0; i < 10 && !store.getLock(); i++) await tick();
+    expect(store.getLock()).not.toBeNull();
+    const tabB = useFeePass({ store });
+    await tabB.resumePending();
+    await tabB.scan();
+    await tabB.send(config.demoRecipient, 10n);
+    expect(tabB.notice.value!.code).toBe('SEND_IN_PROGRESS');
+    release();
+    await a;
+    expect(tabA.ticket.value).not.toBeNull();
+    expect(store.getLock()).toBeNull();
+    expect(h.signCalls).toBe(1);
+  });
+
+  it('a re-send answered "missing inputs" after the coin was spent elsewhere says the coin changed', async () => {
+    const store = memoryStore();
+    const fp = useFeePass({ store });
+    fund(fp);
+    await fp.resumePending();
+    await fp.scan();
+    h.chain.sendRawTransaction = async () => { throw new Error('socket closed'); };
+    await fp.send(config.demoRecipient, 10n);
+    const in0 = store.load()!.in0.split(':')[0];
+    h.chain.utxoSet = h.chain.utxoSet.filter(([, u]: any) => u.txid !== in0);
+    h.chain.sendRawTransaction = async () => { throw new Error('bad-txns-inputs-missingorspent'); };
+    await fp.resendPending();
+    expect(fp.notice.value!.code).toBe('COIN_CHANGED');
+    expect(store.load()).toBeNull();
+  });
+
+  it("clear(txid) never removes another tab's record", () => {
+    const store = memoryStore();
+    store.save({ txid: 'a'.repeat(64) } as never);
+    store.clear('b'.repeat(64));
+    expect(store.load()).not.toBeNull();
+    store.clear('a'.repeat(64));
+    expect(store.load()).toBeNull();
   });
 });
