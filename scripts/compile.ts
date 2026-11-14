@@ -1,5 +1,6 @@
 // Compiles contracts/FeePassPool.cash with cashc and writes the artifact the app and tests import.
-// Prints the artifact sha256 and the redeem-script opcode count (evidence/compile.json).
+// Prints the artifact sha256 and the asm token count of the compiled script before constructor args
+// (evidence/compile.json). The redeem-script size and opcode count are in evidence/tx-shape.json.
 import { compileFile } from 'cashc';
 import { createHash } from 'node:crypto';
 import { writeFileSync, mkdirSync } from 'node:fs';

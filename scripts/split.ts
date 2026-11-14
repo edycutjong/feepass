@@ -38,8 +38,11 @@ async function main() {
   const build = (fee: bigint) => {
     const b = new TransactionBuilder({ provider }).addInputs(bch, signer).addInputs(pusd, signer);
     for (let i = 0; i < lanes; i++) b.addOutput({ to: pool.tokenAddress, amount: sats, token: { category, amount: LANE_SEED_UNITS } });
-    b.addOutput({ to: hot.tokenAddress, amount: 1000n, token: { category, amount: pusdUnits - need } });
-    const change = inSats - BigInt(lanes) * sats - 1000n - fee;
+    // PUSD change only when some is left: a zero-amount fungible token output is not valid.
+    const pusdChange = pusdUnits - need;
+    const pusdChangeSats = pusdChange > 0n ? 1000n : 0n;
+    if (pusdChange > 0n) b.addOutput({ to: hot.tokenAddress, amount: pusdChangeSats, token: { category, amount: pusdChange } });
+    const change = inSats - BigInt(lanes) * sats - pusdChangeSats - fee;
     if (change < 546n) throw new Error(`not enough BCH: short by ${546n - change} sats`);
     b.addOutput({ to: hot.address, amount: change });
     return b;

@@ -76,7 +76,8 @@ export function appendEvidence(net: Net, r: EvidenceRow): void {
   appendFileSync(csvPath(net), row.join(',') + '\n');
 }
 
-/** Mainnet spends need an explicit cap; the scripts never read the kitchen authorization file themselves. */
+/** Mainnet spends need an explicit cap. The cap is whatever the caller passes: the operator's wrapper supplies it from
+ *  the operator's written authorization, and these scripts never invent or default one. */
 export function requireCap(net: Net, outflowSats: bigint): void {
   if (net !== 'mainnet') return;
   const cap = arg('authorized-cap');

@@ -3,14 +3,13 @@
 //   2. genesis tx: mint a test fungible token standing in for PUSD; in the same tx seed one pool lane
 //      (100,000 sats + 1 unit, R7) and give a fresh "user" key a 1,000-sat coin holding 200 units and no other BCH
 //   3. the sponsored send: user sends 10 units, the covenant pays the miner fee, the user pays 1 unit to the pool
-// Every broadcast tx is appended to evidence/<network>-txs.csv.
+// Every broadcast tx is appended to evidence/<network>-txs.csv (chipnet only; mock writes nothing).
 // Usage: tsx scripts/chipnet-spike.ts --network mock|chipnet
 import { decodePrivateKeyWif, encodePrivateKeyWif, generatePrivateKey, hash160, secp256k1, encodeCashAddress } from '@bitauth/libauth';
 import {
   ElectrumNetworkProvider, MockNetworkProvider, SignatureTemplate, TransactionBuilder, randomUtxo,
   type NetworkProvider, type SpendableUtxo,
 } from 'cashscript';
-import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
 import { poolContract } from '../src/core/pool';
 import { buildSponsoredSend } from '../src/core/sponsoredSend';
 import { signWcTransaction } from '../src/core/headlessSigner';
@@ -18,6 +17,7 @@ import { toWizardRequest, verifySignedTx } from '../src/core/wizard';
 import { lockingBytecodeOf } from '../src/core/dust';
 import { DEFAULT_PARAMS } from '../src/core/params';
 import { readKeyFile } from './env';
+import { appendEvidence } from './lib';
 
 const network = process.argv[process.argv.indexOf('--network') + 1];
 if (network !== 'mock' && network !== 'chipnet') throw new Error('--network mock|chipnet');
@@ -42,11 +42,9 @@ const user = network === 'mock'
   ? keyFromWif(encodePrivateKeyWif(generatePrivateKey(), 'testnet'))
   : keyFromWif(readKeyFile('chipnet-user').WIF_TESTNET!);
 const provider: NetworkProvider = network === 'mock' ? new MockNetworkProvider() : new ElectrumNetworkProvider('chipnet');
-const csv = new URL(`../evidence/${network}-txs.csv`, import.meta.url);
-// Only real networks leave evidence rows; mock txids are not evidence of anything on chain.
-if (network !== 'mock' && !existsSync(csv)) writeFileSync(csv, 'txid,kind,utc,size_bytes,miner_fee_sats,pool_subsidy_sats,fee_tokens,user_bch_inputs\n');
-const log = (txid: string, kind: string, size: number, fee: bigint, subsidy = 0n, feeTokens = 0n, userBch = '') => {
-  if (network !== 'mock') appendFileSync(csv, `${txid},${kind},${new Date().toISOString()},${size},${fee},${subsidy},${feeTokens},${userBch}\n`);
+// Evidence rows use the shared 13-column schema (scripts/lib.ts); mock runs write nothing.
+const log = (txid: string, kind: 'split' | 'send' | 'genesis', size: number, fee: bigint, outflow: bigint, extra: { subsidy?: bigint; feeTokens?: bigint; before?: bigint; after?: bigint } = {}) => {
+  appendEvidence(network, { txid, kind, sizeBytes: size, minerFeeSats: fee, operatorOutflowSats: outflow, poolSubsidySats: extra.subsidy, pusdFeeUnits: extra.feeTokens, userBefore: extra.before, userAfter: extra.after });
   console.log(`${kind.padEnd(10)} ${txid} ${size} B fee ${fee}`);
 };
 
@@ -63,7 +61,7 @@ async function main() {
     const b = new TransactionBuilder({ provider }).addInputs(funds, signer.unlockP2PKH())
       .addOutput({ to: hot.address, amount: total - 500n });
     const tx = await b.send();
-    log(tx.txid, 'vout0', tx.hex.length / 2, 500n);
+    log(tx.txid, 'split', tx.hex.length / 2, 500n, 500n);
     genesisCoin = (await provider.getUtxos(hot.address)).find((u) => u.txid === tx.txid && u.vout === 0)!;
   }
 
@@ -78,7 +76,7 @@ async function main() {
     .addOutput({ to: hot.tokenAddress, amount: 1_000n, token: { category, amount: SUPPLY - 1n - USER_UNITS } })
     .addOutput({ to: hot.address, amount: change })
     .send();
-  log(g.txid, 'genesis', g.hex.length / 2, fee);
+  log(g.txid, 'genesis', g.hex.length / 2, fee, fee + LANE_SATS + USER_SATS);
 
   // 3. the sponsored send, from a wallet whose only coin is a token coin
   const userCoins = await provider.getUtxos(user.address);
@@ -91,7 +89,8 @@ async function main() {
   const v = verifySignedTx(signed, req.proposed, lockingBytecodeOf(user.tokenAddress));
   const txid = await provider.sendRawTransaction(signed);
   if (txid !== v.txid) throw new Error(`txid mismatch ${txid} vs ${v.txid}`);
-  log(txid, 'sponsored', v.sizeBytes, v.feeSats, send.poolSubsidySats, DEFAULT_PARAMS.feeTokens, String(userBch));
+  const userAfter = (await provider.getUtxos(user.address)).filter((u) => !u.token).reduce((s, u) => s + u.satoshis, 0n);
+  log(txid, 'send', v.sizeBytes, v.feeSats, 0n, { subsidy: send.poolSubsidySats, feeTokens: DEFAULT_PARAMS.feeTokens, before: userBch, after: userAfter });
 
   const after = await provider.getUtxos(user.address);
   console.log(JSON.stringify({
