@@ -20328,12 +20328,14 @@ async function readFaucetCoins(chain, c) {
   const bch = utxos.filter((u) => !u.token);
   return { pusd, bch, units: pusd.reduce((s, u) => s + u.token.amount, 0n) };
 }
-function pickClaimCoins(pusd, units, rng = Math.random) {
-  const single = pusd.filter((u) => u.token.amount >= units);
-  if (single.length) return [single[Math.min(single.length - 1, Math.floor(rng() * single.length))]];
+function pickClaimCoins(pusd, units) {
+  const byValue = [...pusd].sort(
+    (a, b) => b.token.amount > a.token.amount ? 1 : b.token.amount < a.token.amount ? -1 : `${a.txid}:${a.vout}`.localeCompare(`${b.txid}:${b.vout}`)
+  );
+  if (byValue[0] && byValue[0].token.amount >= units) return [byValue[0]];
   const picked = [];
   let have = 0n;
-  for (const u of [...pusd].sort((a, b) => b.token.amount > a.token.amount ? 1 : b.token.amount < a.token.amount ? -1 : 0)) {
+  for (const u of byValue) {
     picked.push(u);
     have += u.token.amount;
     if (have >= units) return picked;
@@ -20351,7 +20353,7 @@ function buildClaim(coins, picked, recipientTokenAddress, c, provider) {
   const changeUnits = inUnits - c.claimUnits;
   const changeSats = 1000n;
   const signer = new SignatureTemplate(c.faucetPriv).unlockP2PKH();
-  const bchIn = coins.bch.length ? [[...coins.bch].sort((a, b) => b.satoshis > a.satoshis ? 1 : -1)[0]] : [];
+  const bchIn = coins.bch.length ? [[...coins.bch].sort((a, b) => b.satoshis > a.satoshis ? 1 : b.satoshis < a.satoshis ? -1 : `${a.txid}:${a.vout}`.localeCompare(`${b.txid}:${b.vout}`))[0]] : [];
   const inputs = [...picked, ...bchIn];
   const inSats = inputs.reduce((s, u) => s + u.satoshis, 0n);
   const build = (fee2) => {
@@ -20381,19 +20383,21 @@ async function claimStarter(chain, c, addressInput) {
   const toLock = binToHex(lockingBytecodeOf(to));
   if (toLock === binToHex(lockingBytecodeOf(c.faucetTokenAddress))) throw new StarterError("SELF", "That is the faucet address.");
   checkStarterSats(c);
-  const hist = await readClaimHistory(chain, c);
-  if (hist.claimedLocks.has(toLock)) throw new StarterError("ALREADY_CLAIMED", "This address already claimed its starter PUSD.");
-  if (hist.claimsToday >= c.dailyCap) throw new StarterError("DAILY_CAP", `Today's starter PUSD is gone (${c.dailyCap} claims per UTC day). Try again after 00:00 UTC.`);
   let lastErr;
+  let claimsToday = 0;
   for (let attempt = 0; attempt < 3; attempt++) {
+    const hist = await readClaimHistory(chain, c);
+    if (hist.claimedLocks.has(toLock)) throw new StarterError("ALREADY_CLAIMED", "This address already claimed its starter PUSD.");
+    if (hist.claimsToday >= c.dailyCap) throw new StarterError("DAILY_CAP", `Today's starter PUSD is gone (${c.dailyCap} claims per UTC day). Try again after 00:00 UTC.`);
+    claimsToday = hist.claimsToday;
     const coins = await readFaucetCoins(chain, c);
     if (coins.units < c.claimUnits) throw new StarterError("FAUCET_EMPTY", "The faucet has run out of starter PUSD.");
-    const picked = pickClaimCoins(coins.pusd, c.claimUnits, c.rng);
+    const picked = pickClaimCoins(coins.pusd, c.claimUnits);
     if (!picked.length) throw new StarterError("FAUCET_EMPTY", "The faucet has run out of starter PUSD.");
     const claim = buildClaim(coins, picked, to, c, chain);
     try {
       const txid = await chain.sendRawTransaction(claim.hex);
-      return { txid, units: c.claimUnits, feeSats: claim.feeSats, claimsToday: hist.claimsToday + 1 };
+      return { txid, units: c.claimUnits, feeSats: claim.feeSats, claimsToday: claimsToday + 1 };
     } catch (e) {
       lastErr = e;
       if (!CONFLICT.test(String(e.message ?? e))) throw new StarterError("CHAIN", "The network did not accept the claim. Try again in a minute.");

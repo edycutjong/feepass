@@ -20,12 +20,19 @@ function mainnetKey(seed: string) {
 class Chain extends MockNetworkProvider implements FaucetChain {
   sent: string[] = [];
   failNext: string[] = [];
+  /** Runs once, just before the next scripted failure: a competing claim that wins the race. */
+  beforeFail?: () => Promise<unknown>;
   height = 1000;
   blockTimes = new Map<string, number>(); // txid → unix seconds (absent = mempool)
   constructor() { super(); (this as any).network = 'mainnet'; }
   async sendRawTransaction(hex: string) {
     const f = this.failNext.shift();
-    if (f) throw new Error(f);
+    if (f) {
+      const competitor = this.beforeFail;
+      this.beforeFail = undefined;
+      if (competitor) await competitor();
+      throw new Error(f);
+    }
     const txid = await super.sendRawTransaction(hex);
     this.sent.push(txid);
     return txid;
@@ -43,7 +50,7 @@ function setup(o: { coins?: bigint[]; bch?: bigint; cfg?: Partial<StarterConfig>
   if (o.bch !== 0n) chain.addUtxo(faucet.tokenAddress, randomUtxo({ satoshis: o.bch ?? 50_000n }));
   const cfg: StarterConfig = {
     category: CAT, faucetPriv: faucet.priv, faucetPub: faucet.pub, faucetAddress: faucet.address, faucetTokenAddress: faucet.tokenAddress,
-    ...STARTER_DEFAULTS, now: () => NOW, rng: () => 0, ...o.cfg,
+    ...STARTER_DEFAULTS, now: () => NOW, ...o.cfg,
   };
   return { faucet, chain, cfg };
 }
@@ -153,13 +160,31 @@ describe('starter claim', () => {
     expect(chain.sent).toHaveLength(0);
   });
 
-  it('pickClaimCoins: a random single covering coin, else largest-first combination, else nothing', () => {
+  it('pickClaimCoins: the largest single covering coin (deterministic, so concurrent claims collide), else largest-first, else nothing', () => {
     const c = (u: bigint) => randomUtxo({ satoshis: 1000n, token: { category: CAT, amount: u } }) as SpendableUtxo;
     const a = [c(30n), c(40n), c(5n)];
-    expect(pickClaimCoins(a, 25n, () => 0)![0]!.token!.amount).toBe(30n);
-    expect(pickClaimCoins(a, 25n, () => 0.99)![0]!.token!.amount).toBe(40n);
+    expect(pickClaimCoins(a, 25n)[0]!.token!.amount).toBe(40n);
+    const tie = [c(50n), c(50n)];
+    expect(pickClaimCoins([...tie].reverse(), 25n)[0]!.txid).toBe(pickClaimCoins(tie, 25n)[0]!.txid); // ties by outpoint, any order
     expect(pickClaimCoins([c(10n), c(10n), c(10n)], 25n)).toHaveLength(3);
     expect(pickClaimCoins([c(10n), c(10n)], 25n)).toEqual([]);
+  });
+
+  it('race: a retry after a coin conflict re-reads the history, so a competing claim for the same address wins once', async () => {
+    const { chain, cfg } = setup({ coins: [300n, 300n] }); // two covering coins: the pick must still be the same coin
+    chain.failNext = ['txn-mempool-conflict'];
+    chain.beforeFail = () => claimStarter(chain, cfg, judge(1)); // the other request broadcasts first
+    await expect(claimStarter(chain, cfg, judge(1))).rejects.toMatchObject({ code: 'ALREADY_CLAIMED' });
+    expect(chain.sent).toHaveLength(1);
+  });
+
+  it('race: a retry after a coin conflict re-checks the daily cap, so the last slot is taken once', async () => {
+    const { chain, cfg } = setup({ coins: [300n], cfg: { dailyCap: 2 } });
+    await claimStarter(chain, cfg, judge(1));
+    chain.failNext = ['txn-mempool-conflict'];
+    chain.beforeFail = () => claimStarter(chain, cfg, judge(2)); // takes the last slot while ours is in flight
+    await expect(claimStarter(chain, cfg, judge(3))).rejects.toMatchObject({ code: 'DAILY_CAP' });
+    expect(chain.sent).toHaveLength(2);
   });
 
   it('StarterError is a named error class', () => {

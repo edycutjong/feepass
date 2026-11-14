@@ -3,7 +3,10 @@
 //
 // Real guarantees (stated in the UI and README, never more): one claim per receiving address and a daily claim cap, both
 // counted from the faucet address's own on-chain history (stateless, no database), and a hard budget = what the faucet
-// holds. The history read is NOT atomic: two requests inside about a minute can both pass, bounded by the claim size.
+// holds. The read is not atomic, so concurrent claims are serialized by the chain instead: every claim spends the faucet's
+// largest covering PUSD coin and its largest BCH coin, so two claims built from the same read conflict and only one is
+// accepted; the loser re-reads the history (mempool included) and re-checks both limits before it rebuilds. What remains
+// is the lag between a broadcast and its appearance in the Electrum server's history (seconds, one server per instance).
 import {
   binToHex,
   decodeTransaction,
@@ -37,7 +40,6 @@ export interface StarterConfig {
   starterSats: bigint;
   feeRate?: number;
   now?: () => number; // ms
-  rng?: () => number;
 }
 
 export class StarterError extends Error {
@@ -128,13 +130,18 @@ export async function readFaucetCoins(chain: FaucetChain, c: StarterConfig): Pro
   return { pusd, bch, units: pusd.reduce((s, u) => s + u.token!.amount, 0n) };
 }
 
-/** Coins for one claim: one random coin that alone covers the claim, else the largest coins until they do. */
-export function pickClaimCoins(pusd: SpendableUtxo[], units: bigint, rng: () => number = Math.random): SpendableUtxo[] {
-  const single = pusd.filter((u) => u.token!.amount >= units);
-  if (single.length) return [single[Math.min(single.length - 1, Math.floor(rng() * single.length))]!];
+/**
+ * Coins for one claim: the largest coin that alone covers the claim (ties by outpoint), else the largest coins until they
+ * do. Deterministic on purpose: concurrent claims must pick the SAME coin so they conflict and the retry re-checks limits.
+ */
+export function pickClaimCoins(pusd: SpendableUtxo[], units: bigint): SpendableUtxo[] {
+  const byValue = [...pusd].sort((a, b) =>
+    b.token!.amount > a.token!.amount ? 1 : b.token!.amount < a.token!.amount ? -1 : `${a.txid}:${a.vout}`.localeCompare(`${b.txid}:${b.vout}`),
+  );
+  if (byValue[0] && byValue[0].token!.amount >= units) return [byValue[0]];
   const picked: SpendableUtxo[] = [];
   let have = 0n;
-  for (const u of [...pusd].sort((a, b) => (b.token!.amount > a.token!.amount ? 1 : b.token!.amount < a.token!.amount ? -1 : 0))) {
+  for (const u of byValue) {
     picked.push(u);
     have += u.token!.amount;
     if (have >= units) return picked;
@@ -160,7 +167,10 @@ export function buildClaim(coins: FaucetCoins, picked: SpendableUtxo[], recipien
   const changeUnits = inUnits - c.claimUnits;
   const changeSats = 1000n;
   const signer = new SignatureTemplate(c.faucetPriv).unlockP2PKH();
-  const bchIn = coins.bch.length ? [[...coins.bch].sort((a, b) => (b.satoshis > a.satoshis ? 1 : -1))[0]!] : [];
+  // the largest BCH coin, ties by outpoint: deterministic so concurrent claims collide (see the header)
+  const bchIn = coins.bch.length
+    ? [[...coins.bch].sort((a, b) => (b.satoshis > a.satoshis ? 1 : b.satoshis < a.satoshis ? -1 : `${a.txid}:${a.vout}`.localeCompare(`${b.txid}:${b.vout}`)))[0]!]
+    : [];
   const inputs = [...picked, ...bchIn];
   const inSats = inputs.reduce((s, u) => s + u.satoshis, 0n);
   const build = (fee: bigint) => {
@@ -202,21 +212,23 @@ export async function claimStarter(chain: FaucetChain, c: StarterConfig, address
   if (toLock === binToHex(lockingBytecodeOf(c.faucetTokenAddress))) throw new StarterError('SELF', 'That is the faucet address.');
   checkStarterSats(c);
 
-  const hist = await readClaimHistory(chain, c);
-  if (hist.claimedLocks.has(toLock)) throw new StarterError('ALREADY_CLAIMED', 'This address already claimed its starter PUSD.');
-  if (hist.claimsToday >= c.dailyCap) throw new StarterError('DAILY_CAP', `Today's starter PUSD is gone (${c.dailyCap} claims per UTC day). Try again after 00:00 UTC.`);
-
   let lastErr: unknown;
+  let claimsToday = 0;
   for (let attempt = 0; attempt < 3; attempt++) {
+    // every attempt re-reads the history: after a coin conflict the winning claim is in the mempool history, so a second
+    // claim for the same address, or one past the daily cap, is refused here instead of being rebuilt and broadcast
+    const hist = await readClaimHistory(chain, c);
+    if (hist.claimedLocks.has(toLock)) throw new StarterError('ALREADY_CLAIMED', 'This address already claimed its starter PUSD.');
+    if (hist.claimsToday >= c.dailyCap) throw new StarterError('DAILY_CAP', `Today's starter PUSD is gone (${c.dailyCap} claims per UTC day). Try again after 00:00 UTC.`);
+    claimsToday = hist.claimsToday;
     const coins = await readFaucetCoins(chain, c);
     if (coins.units < c.claimUnits) throw new StarterError('FAUCET_EMPTY', 'The faucet has run out of starter PUSD.');
-    // a fresh chain read on every attempt drops the coins a competing claim just spent
-    const picked = pickClaimCoins(coins.pusd, c.claimUnits, c.rng);
+    const picked = pickClaimCoins(coins.pusd, c.claimUnits);
     if (!picked.length) throw new StarterError('FAUCET_EMPTY', 'The faucet has run out of starter PUSD.');
     const claim = buildClaim(coins, picked, to, c, chain);
     try {
       const txid = await chain.sendRawTransaction(claim.hex);
-      return { txid, units: c.claimUnits, feeSats: claim.feeSats, claimsToday: hist.claimsToday + 1 };
+      return { txid, units: c.claimUnits, feeSats: claim.feeSats, claimsToday: claimsToday + 1 };
     } catch (e) {
       lastErr = e;
       if (!CONFLICT.test(String((e as Error).message ?? e))) throw new StarterError('CHAIN', 'The network did not accept the claim. Try again in a minute.');
