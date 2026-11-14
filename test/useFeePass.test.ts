@@ -133,4 +133,64 @@ describe('useFeePass', () => {
     expect(fp.ticket.value!.spendableAfter).toBeNull();
     expect(fp.ticket.value!.balanceUnchanged).toBe(false);
   });
+
+  it('a corrupt stored record is cleared, never a permanent block', async () => {
+    const store = memoryStore();
+    store.save({ txid: 'nope' } as never);
+    const fp = useFeePass({ store });
+    await fp.resumePending();
+    expect(store.load()).toBeNull();
+    expect(fp.resuming.value).toBe(false);
+    expect(fp.notice.value).toBeNull();
+  });
+
+  it('start over with the server unreachable keeps the record (a landed send must not be forgotten)', async () => {
+    const store = memoryStore();
+    const fp = useFeePass({ store });
+    fund(fp);
+    await fp.resumePending();
+    await fp.scan();
+    const real = h.chain.sendRawTransaction.bind(h.chain);
+    h.chain.sendRawTransaction = async () => { throw new Error('socket closed'); };
+    await fp.send(config.demoRecipient, 10n);
+    h.chain.getRawTransaction = async () => { throw new Error('connection reset'); };
+    await fp.startOver();
+    expect(store.load()).not.toBeNull();
+    expect(fp.notice.value!.code).toBe('PENDING');
+    void real;
+  });
+
+  it("second tab: a send while another tab's version already landed shows that ticket and no stale notice", async () => {
+    const store = memoryStore();
+    const tabA = useFeePass({ store });
+    fund(tabA);
+    await tabA.resumePending();
+    await tabA.scan();
+    const real = h.chain.sendRawTransaction.bind(h.chain);
+    h.chain.sendRawTransaction = async (hex: string) => { await real(hex); throw new Error('socket closed'); }; // lands, answer lost
+    await tabA.send(config.demoRecipient, 10n);
+    h.chain.sendRawTransaction = real;
+    // tab C opened before A's record existed (its resume found nothing), then tries to send on the shared store
+    const tabC = useFeePass({ store });
+    tabC.resuming.value = false;
+    await tabC.scan();
+    await tabC.send(config.demoRecipient, 10n);
+    expect(tabC.ticket.value).not.toBeNull();
+    expect(tabC.notice.value).toBeNull();
+    expect(store.load()).toBeNull();
+  });
+
+  it('a re-send rejected for a fee reason says so, not "lane taken"', async () => {
+    const store = memoryStore();
+    const fp = useFeePass({ store });
+    fund(fp);
+    await fp.resumePending();
+    await fp.scan();
+    h.chain.sendRawTransaction = async () => { throw new Error('socket closed'); };
+    await fp.send(config.demoRecipient, 10n);
+    h.chain.sendRawTransaction = async () => { throw new Error('min relay fee not met'); };
+    await fp.resendPending();
+    expect(fp.notice.value!.message).toMatch(/rejected that version \(fee\)/);
+    expect(fp.notice.value!.message).not.toMatch(/taken/);
+  });
 });

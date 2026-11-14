@@ -313,6 +313,19 @@ describe('runSend recovery branches (round-1 QA additions)', () => {
   });
 });
 
+describe('checkPending server errors', () => {
+  it('a transient getRawTransaction error throws (offline), it is never read as "not found"', async () => {
+    const s = setup(); s.addLane(); s.addUserCoin(100n, 1000n);
+    const r = rig(s, { failures: ['socket closed'] });
+    await runSend(r.deps, { coins: await coins(s), recipient: s.payee.tokenAddress, amount: 10n }).catch(() => {});
+    const rec = r.store.load()!;
+    const flaky: FlowProvider = { ...r.deps.provider, getRawTransaction: async () => { throw new Error('ECONNRESET'); } };
+    await expect(checkPending(flaky, rec)).rejects.toThrow(/ECONNRESET/);
+    const notFound: FlowProvider = { ...r.deps.provider, getRawTransaction: async () => { throw new Error('No such mempool or blockchain transaction'); } };
+    expect(await checkPending(notFound, rec)).toBe('unknown');
+  });
+});
+
 describe('classifyBroadcastError', () => {
   it.each([
     ['txn-mempool-conflict (code 18)', 'conflict'],
