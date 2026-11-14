@@ -24,7 +24,7 @@ const rows = [1000n, 1330n, 2000n, 5000n].map((coinSats) => {
   const lane = provider.addUtxo(pool.tokenAddress, randomUtxo({ satoshis: 100_000n, token: { category: CAT, amount: 1n } }));
   const r = buildSponsoredSend({ pool, params: DEFAULT_PARAMS, categoryDisplay: CAT, userUtxo, userAddress: user.addr, lane, recipient: payee.addr, amount: 10n });
   const req = toWizardRequest(r, { pathName: 'receive', addressIndex: 0 });
-  const v = verifySignedTx(signWcTransaction(req.transaction, new Map([[0, user.priv]])), req.transaction, lockingBytecodeOf(user.addr));
+  const v = verifySignedTx(signWcTransaction(req.wire, new Map([[0, user.priv]])), req.proposed, lockingBytecodeOf(user.addr));
   return { userCoinSats: Number(coinSats), placeholderSizeBytes: r.sizeBytes, signedSizeBytes: v.sizeBytes, minerFeeSats: Number(r.minerFeeSats), topUpSats: Number(r.topUpSats), poolSubsidySats: Number(r.poolSubsidySats), feeRateSatPerByte: Number(v.feeSats) / v.sizeBytes };
 });
 

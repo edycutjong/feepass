@@ -46,8 +46,8 @@ describe('FeePassPool covenant — honest path', () => {
       lane: s.addLane(), recipient: s.payee.tokenAddress, amount: 10n,
     });
     const req = toWizardRequest(send, { pathName: 'receive', addressIndex: 0 });
-    const signed = signWcTransaction(req.transaction, new Map([[0, s.user.priv]]));
-    const v = verifySignedTx(signed, req.transaction, s.user.lock);
+    const signed = signWcTransaction(req.wire, new Map([[0, s.user.priv]]));
+    const v = verifySignedTx(signed, req.proposed, s.user.lock);
     const txid = await s.provider.sendRawTransaction(signed);
     expect(txid).toBe(v.txid);
     expect(v.sighashType).toBe(0x61);
@@ -193,7 +193,7 @@ describe('FeePassPool covenant — every rule rejects its violation', () => {
       const send = buildSponsoredSend({ pool: s.pool, params: s.params, categoryDisplay: pusd(0n).category,
         userUtxo: coin, userAddress: s.user.tokenAddress, lane, recipient: s.payee.tokenAddress, amount: 10n });
       const req = toWizardRequest(send, { pathName: 'receive', addressIndex: 0 });
-      return signWcTransaction(req.transaction, new Map([[0, s.user.priv]]));
+      return signWcTransaction(req.wire, new Map([[0, s.user.priv]]));
     };
     const a = mk(s.addUserCoin(100n)); const b = mk(s.addUserCoin(100n));
     await s.provider.sendRawTransaction(a);

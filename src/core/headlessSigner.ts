@@ -11,10 +11,13 @@ import {
   secp256k1,
   type TransactionCommon,
 } from '@bitauth/libauth';
+import { parseExtendedJson } from '@wizardconnect/core';
 import type { WcTransactionObject } from 'cashscript';
 import { REQUIRED_SIGHASH } from './wizard';
 
-export function signWcTransaction(wc: WcTransactionObject, keys: Map<number, Uint8Array>, sighash = REQUIRED_SIGHASH): string {
+/** Accepts the WC object either with real types or in the extended-JSON wire form a wallet receives over the relay. */
+export function signWcTransaction(input: WcTransactionObject | unknown, keys: Map<number, Uint8Array>, sighash = REQUIRED_SIGHASH): string {
+  const wc = (isWire(input) ? parseExtendedJson(JSON.stringify(input)) : input) as WcTransactionObject;
   const tx = structuredClone(wc.transaction) as TransactionCommon;
   const sourceOutputs = wc.sourceOutputs.map((o) => ({ lockingBytecode: o.lockingBytecode, valueSatoshis: o.valueSatoshis, token: o.token }));
   for (const [index, priv] of keys) {
@@ -32,4 +35,9 @@ export function signWcTransaction(wc: WcTransactionObject, keys: Map<number, Uin
     };
   }
   return binToHex(encodeTransaction(tx));
+}
+
+function isWire(x: unknown): boolean {
+  const so = (x as { sourceOutputs?: { valueSatoshis?: unknown }[] }).sourceOutputs;
+  return typeof so?.[0]?.valueSatoshis === 'string';
 }

@@ -5,6 +5,7 @@ import {
   encodeTransaction,
   hash160,
   hash256,
+  stringify,
   type TransactionCommon,
 } from '@bitauth/libauth';
 import type { WcTransactionObject } from 'cashscript';
@@ -17,16 +18,23 @@ export const REQUIRED_SIGHASH = 0x61;
 export type InputPath = [number, string, number];
 
 export interface WizardSignRequest {
-  transaction: WcTransactionObject;
+  /** What goes over the relay: the WC object in extended-JSON form (bigint → "<bigint: 5n>", bytes → "<Uint8Array: 0x…>").
+   *  The relay JSON.stringify()s the message, so raw BigInt/Uint8Array values would throw (found in the P1a relay test). */
+  wire: unknown;
+  /** The same object with real types, kept locally to verify what the wallet returns. */
+  proposed: WcTransactionObject;
   inputPaths: InputPath[];
+}
+
+/** The BCH WalletConnect convention (`JSON.parse(stringify(obj))`, libauth) that WizardConnect wallets parse back. */
+export function toWire(obj: WcTransactionObject): unknown {
+  return JSON.parse(stringify(obj));
 }
 
 /** Only input 0 (the user's coin) needs a wallet signature; the pool input's unlock is already complete. */
 export function toWizardRequest(send: SponsoredSend, userPath: { pathName: string; addressIndex: number }, userPrompt?: string): WizardSignRequest {
-  return {
-    transaction: send.builder.generateWcTransactionObject({ broadcast: false, userPrompt }),
-    inputPaths: [[0, userPath.pathName, userPath.addressIndex]],
-  };
+  const proposed = send.builder.generateWcTransactionObject({ broadcast: false, userPrompt });
+  return { wire: toWire(proposed), proposed, inputPaths: [[0, userPath.pathName, userPath.addressIndex]] };
 }
 
 export class VerifyError extends Error {

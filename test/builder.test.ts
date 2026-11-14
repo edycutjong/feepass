@@ -73,27 +73,27 @@ describe('verifySignedTx (what the wallet returns)', () => {
   function signed(s: ReturnType<typeof setup>, sighash?: number, signer = s.user.priv) {
     const r = send(s);
     const req = toWizardRequest(r, { pathName: 'receive', addressIndex: 0 });
-    return { req, hex: signWcTransaction(req.transaction, new Map([[0, signer]]), sighash) };
+    return { req, hex: signWcTransaction(req.wire, new Map([[0, signer]]), sighash) };
   }
   const code = (fn: () => unknown) => { try { fn(); return 'ok'; } catch (e) { return (e as VerifyError).code; } };
 
   it('accepts an unchanged tx signed 0x61 by the coin owner', () => {
     const s = setup(); const { req, hex } = signed(s);
-    expect(code(() => verifySignedTx(hex, req.transaction, s.user.lock))).toBe('ok');
+    expect(code(() => verifySignedTx(hex, req.proposed, s.user.lock))).toBe('ok');
   });
   it('refuses sighash 0x41 (ALL|FORKID without UTXOS)', () => {
     const s = setup(); const { req, hex } = signed(s, 0x41);
-    expect(code(() => verifySignedTx(hex, req.transaction, s.user.lock))).toBe('SIGHASH');
+    expect(code(() => verifySignedTx(hex, req.proposed, s.user.lock))).toBe('SIGHASH');
   });
   it('refuses a signature by a different key', () => {
     const s = setup(); const { req, hex } = signed(s, undefined, key('someone').priv);
-    expect(code(() => verifySignedTx(hex, req.transaction, s.user.lock))).toBe('SIGNER');
+    expect(code(() => verifySignedTx(hex, req.proposed, s.user.lock))).toBe('SIGNER');
   });
   it('refuses a wallet that redirected an output', () => {
     const s = setup(); const { req, hex } = signed(s);
     const tx = decodeTransaction(hexToBin(hex)) as TransactionCommon;
     tx.outputs[0] = { ...tx.outputs[0]!, lockingBytecode: key('thief').lock };
-    expect(code(() => verifySignedTx(binToHex(encodeTransaction(tx)), req.transaction, s.user.lock))).toBe('OUTPUTS');
+    expect(code(() => verifySignedTx(binToHex(encodeTransaction(tx)), req.proposed, s.user.lock))).toBe('OUTPUTS');
   });
 });
 
