@@ -20330,6 +20330,7 @@ async function readClaimHistory(chain, c) {
   let claimCount = 0;
   for (const e of recent) {
     const tx = txs.get(e.txid);
+    if (!tx.outputs.some((o) => o.token && binToHex(o.lockingBytecode) !== faucetLock)) continue;
     if (!await spendsFaucetCoin(tx)) continue;
     claimCount++;
     for (const o of tx.outputs) {
@@ -20406,11 +20407,11 @@ async function claimStarter(chain, c, addressInput) {
   let lastErr;
   let claimsToday = 0;
   for (let attempt = 0; attempt < 3; attempt++) {
+    const coins = await readFaucetCoins(chain, c);
     const hist = await readClaimHistory(chain, c);
     if (hist.claimedLocks.has(toLock)) throw new StarterError("ALREADY_CLAIMED", "This address already claimed its starter PUSD.");
     if (hist.claimsToday >= c.dailyCap) throw new StarterError("DAILY_CAP", `Today's starter PUSD is gone (${c.dailyCap} claims per UTC day). Try again after 00:00 UTC.`);
     claimsToday = hist.claimsToday;
-    const coins = await readFaucetCoins(chain, c);
     if (coins.units < c.claimUnits) throw new StarterError("FAUCET_EMPTY", "The faucet has run out of starter PUSD.");
     const picked = pickClaimCoins(coins.pusd, c.claimUnits);
     if (!picked.length) throw new StarterError("FAUCET_EMPTY", "The faucet has run out of starter PUSD.");
@@ -20545,7 +20546,7 @@ var mainnet_default = {
     maxTopUp: "675"
   },
   lanes: 20,
-  artifactSha256: "5ece3a4e549059a058785466c6be18b3d55151a5ed91c91d66351a674f14a52a",
+  artifactSha256: "2855cbf3f0850188182e2116b5f1c0bd83d546506952acf2a3e9cb59851e2708",
   explorerTx: "https://bchexplorer.info/tx/",
   demoRecipient: "bitcoincash:zzyen2cp5plph8r5uax2qsd4s83u7x3rvylahpest0",
   demoAmountUnits: "10",
@@ -20626,7 +20627,8 @@ contract FeePassPool(
         require(tx.inputs[0].tokenCategory == pusdCategory);
         require(tx.outputs[0].tokenCategory == pusdCategory);
 
-        // R8 the user's change stays a PUSD output, so the top-up cannot leave as plain BCH.
+        // R8 the user's change stays a PUSD output, so in this transaction the top-up can only land on token outputs.
+        // (It is not a permanent barrier: the holder can later move those sats like any coin's; R6 bounds them to T per send.)
         require(tx.outputs[1].tokenCategory == pusdCategory);
 
         // R3 the lane returns to the same covenant.
@@ -20654,7 +20656,7 @@ contract FeePassPool(
   fingerprint: "596a8c30c153a08316e4ea6c195a1330e1b00854fc59f1128397fcb8ac07de3a",
   debug: {
     bytecode: "5579009c63c3529dc4539dc0519d51ce52798800ce52798800d152798851d152798852cd51c78852cc51c6557a94a26952d17b8852d351d0537a939d00cc51cc9300c6537a93a1777767557a519d557a7cad6d6d5168",
-    sourceMap: "20:4:49:5;;;;;22:16:22:32;:36::37;:8::39:1;23:16:23:33:0;:37::38;:8::40:1;24:16:24:37:0;:41::42;:8::44:1;27:26:27:27:0;:16::42:1;:46::58:0;;:8::60:1;30:26:30:27:0;:16::42:1;:46::58:0;;:8::60:1;31:27:31:28:0;:16::43:1;:47::59:0;;:8::61:1;34:27:34:28:0;:16::43:1;:47::59:0;;:8::61:1;37:27:37:28:0;:16::45:1;:59::60:0;:49::77:1;:8::79;40:27:40:28:0;:16::35:1;:49::50:0;:39::57:1;:60::70:0;;:39:::1;:16;:8::72;43:27:43:28:0;:16::43:1;:47::59:0;:8::61:1;44:27:44:28:0;:16::41:1;:55::56:0;:45::69:1;:72::81:0;;:45:::1;:8::83;48:27:48:28:0;:16::35:1;:49::50:0;:38::57:1;:16;:71::72:0;:61::79:1;:82::90:0;;:61:::1;:8::92;20:27:49:5;;:4;53::55::0;;;;54:25:54:33;;:35::42;:8::45:1;53:36:55:5;;;13:0:56:1",
+    sourceMap: "20:4:50:5;;;;;22:16:22:32;:36::37;:8::39:1;23:16:23:33:0;:37::38;:8::40:1;24:16:24:37:0;:41::42;:8::44:1;27:26:27:27:0;:16::42:1;:46::58:0;;:8::60:1;30:26:30:27:0;:16::42:1;:46::58:0;;:8::60:1;31:27:31:28:0;:16::43:1;:47::59:0;;:8::61:1;35:27:35:28:0;:16::43:1;:47::59:0;;:8::61:1;38:27:38:28:0;:16::45:1;:59::60:0;:49::77:1;:8::79;41:27:41:28:0;:16::35:1;:49::50:0;:39::57:1;:60::70:0;;:39:::1;:16;:8::72;44:27:44:28:0;:16::43:1;:47::59:0;:8::61:1;45:27:45:28:0;:16::41:1;:55::56:0;:45::69:1;:72::81:0;;:45:::1;:8::83;49:27:49:28:0;:16::35:1;:49::50:0;:38::57:1;:16;:71::72:0;:61::79:1;:82::90:0;;:61:::1;:8::92;20:27:50:5;;:4;54::56::0;;;;55:25:55:33;;:35::42;:8::45:1;54:36:56:5;;;13:0:57:1",
     logs: [],
     requires: [
       {
@@ -20683,31 +20685,31 @@ contract FeePassPool(
       },
       {
         ip: 38,
-        line: 34
+        line: 35
       },
       {
         ip: 43,
-        line: 37
+        line: 38
       },
       {
         ip: 52,
-        line: 40
+        line: 41
       },
       {
         ip: 56,
-        line: 43
-      },
-      {
-        ip: 64,
         line: 44
       },
       {
+        ip: 64,
+        line: 45
+      },
+      {
         ip: 76,
-        line: 48
+        line: 49
       },
       {
         ip: 86,
-        line: 54
+        line: 55
       }
     ],
     sourceTags: "71:72:sc"

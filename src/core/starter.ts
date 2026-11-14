@@ -5,8 +5,8 @@
 // counted from the faucet address's own on-chain history (stateless, no database), and a hard budget = what the faucet
 // holds. The read is not atomic, so concurrent claims are serialized by the chain instead: every claim spends the faucet's
 // largest covering PUSD coin and its largest BCH coin, so two claims built from the same read conflict and only one is
-// accepted; the loser re-reads the history (mempool included) and re-checks both limits before it rebuilds. What remains
-// is the lag between a broadcast and its appearance in the Electrum server's history (seconds, one server per instance).
+// accepted; the loser re-reads coins and then the history (mempool included) and re-checks both limits before it rebuilds.
+// Reading coins before history means a claim visible in the coin read is visible in the history read too (same server).
 import {
   binToHex,
   decodeTransaction,
@@ -127,6 +127,8 @@ export async function readClaimHistory(chain: FaucetChain, c: StarterConfig): Pr
   let claimCount = 0;
   for (const e of recent) {
     const tx = txs.get(e.txid)!;
+    // a claim pays a token output to someone else; an operator consolidation back to the faucet is not one
+    if (!tx.outputs.some((o) => o.token && binToHex(o.lockingBytecode) !== faucetLock)) continue;
     if (!(await spendsFaucetCoin(tx))) continue;
     claimCount++;
     for (const o of tx.outputs) {
@@ -236,13 +238,14 @@ export async function claimStarter(chain: FaucetChain, c: StarterConfig, address
   let lastErr: unknown;
   let claimsToday = 0;
   for (let attempt = 0; attempt < 3; attempt++) {
-    // every attempt re-reads the history: after a coin conflict the winning claim is in the mempool history, so a second
-    // claim for the same address, or one past the daily cap, is refused here instead of being rebuilt and broadcast
+    // Coins FIRST, then history, on every attempt. A claim that lands between the two reads is then in the history read (a
+    // later view of the same server); if it landed before the coin read, it is in both. The old order (history, then coins)
+    // could build on a winner's change while still counting the history from before it.
+    const coins = await readFaucetCoins(chain, c);
     const hist = await readClaimHistory(chain, c);
     if (hist.claimedLocks.has(toLock)) throw new StarterError('ALREADY_CLAIMED', 'This address already claimed its starter PUSD.');
     if (hist.claimsToday >= c.dailyCap) throw new StarterError('DAILY_CAP', `Today's starter PUSD is gone (${c.dailyCap} claims per UTC day). Try again after 00:00 UTC.`);
     claimsToday = hist.claimsToday;
-    const coins = await readFaucetCoins(chain, c);
     if (coins.units < c.claimUnits) throw new StarterError('FAUCET_EMPTY', 'The faucet has run out of starter PUSD.');
     const picked = pickClaimCoins(coins.pusd, c.claimUnits);
     if (!picked.length) throw new StarterError('FAUCET_EMPTY', 'The faucet has run out of starter PUSD.');

@@ -38,7 +38,11 @@ class Chain extends FundedMock implements FaucetChain {
     this.sent.push(txid);
     return txid;
   }
-  async history() { return this.sent.map((txid) => ({ txid, height: this.blockTimes.has(txid) ? 990 : 0 })); }
+  /** Runs once, right after the next chain read returns its (now stale) answer: a claim landing between two reads. */
+  onFirstRead?: () => Promise<unknown>;
+  private async fireRead() { const f = this.onFirstRead; this.onFirstRead = undefined; if (f) await f(); }
+  async history() { const r = this.sent.map((txid) => ({ txid, height: this.blockTimes.has(txid) ? 990 : 0 })); await this.fireRead(); return r; }
+  async getUtxos(address: string) { const r = await super.getUtxos(address); await this.fireRead(); return r; }
   async tipHeight() { return this.height; }
   async blockTime() { return Math.floor(NOW / 1000) - 3 * 86_400; }
 }
@@ -169,6 +173,28 @@ describe('starter claim', () => {
     expect(pickClaimCoins([...tie].reverse(), 25n)[0]!.txid).toBe(pickClaimCoins(tie, 25n)[0]!.txid); // ties by outpoint, any order
     expect(pickClaimCoins([c(10n), c(10n), c(10n)], 25n)).toHaveLength(3);
     expect(pickClaimCoins([c(10n), c(10n)], 25n)).toEqual([]);
+  });
+
+  it('race: a claim that lands between the coin read and the history read is counted (coins are read first)', async () => {
+    const { chain, cfg } = setup({ coins: [300n], cfg: { dailyCap: 2 } });
+    await claimStarter(chain, cfg, judge(1));
+    chain.onFirstRead = () => claimStarter(chain, cfg, judge(2)); // lands right after our first read of this attempt
+    await expect(claimStarter(chain, cfg, judge(3))).rejects.toMatchObject({ code: 'DAILY_CAP' });
+    expect(chain.sent).toHaveLength(2);
+  });
+
+  it('an operator consolidation back to the faucet does not use a daily slot', async () => {
+    const { chain, cfg, faucet } = setup({ coins: [100n, 100n], cfg: { dailyCap: 1 } });
+    const coins = (await chain.getUtxos(faucet.tokenAddress)).filter((u) => u.token);
+    const bch = (await chain.getUtxos(faucet.tokenAddress)).filter((u) => !u.token);
+    const hex = new TransactionBuilder({ provider: chain })
+      .addInputs([...coins, ...bch], new SignatureTemplate(faucet.priv).unlockP2PKH())
+      .addOutput({ to: faucet.tokenAddress, amount: 1000n, token: { category: CAT, amount: 200n } })
+      .addOutput({ to: faucet.address, amount: 50_000n })
+      .build();
+    await chain.sendRawTransaction(hex);
+    await expect(claimStarter(chain, cfg, judge(1))).resolves.toBeTruthy();
+    await expect(claimStarter(chain, cfg, judge(2))).rejects.toMatchObject({ code: 'DAILY_CAP' });
   });
 
   it('a forged faucet spend (a P2SH coin whose redeem script just pushes the faucet pubkey) is VM-valid but is not a claim', async () => {
