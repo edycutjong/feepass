@@ -255,6 +255,74 @@ describe('useFeePass', () => {
     expect(h.signCalls).toBe(1);
   });
 
+  it('start over after an unknown broadcast pins the coin: the next send must reuse it until its old lane is spent', async () => {
+    const store = memoryStore();
+    const fp = useFeePass({ store });
+    fund(fp); // one user coin: 100 units
+    await fp.resumePending();
+    await fp.scan();
+    const real = h.chain.sendRawTransaction.bind(h.chain);
+    h.chain.sendRawTransaction = async () => { throw new Error('socket closed'); };
+    await fp.send(config.demoRecipient, 10n);
+    expect(fp.notice.value!.code).toBe('BROADCAST_UNKNOWN');
+    const in0 = store.load()!.in0;
+    h.chain.sendRawTransaction = real;
+    await fp.startOver();
+    expect(store.load()).toBeNull();
+    expect(store.getPin()!.in0).toBe(in0);
+    // a bigger coin arrives; a send only it can carry is refused while the old version could still confirm
+    h.chain.addUtxo(me.tokenAddress, randomUtxo({ satoshis: 1400n, token: { category: config.categoryDisplay, amount: 500n } }));
+    await fp.scan();
+    await fp.send(config.demoRecipient, 200n);
+    expect(fp.notice.value!.code).toBe('NO_COIN');
+    expect(fp.notice.value!.message).toMatch(/reuse its coin/);
+    expect(h.signCalls).toBe(1);
+    // once the old version's lane is gone it can never confirm: the pin lifts and the other coin is used
+    store.setPin({ ...store.getPin()!, laneOutpoint: '00'.repeat(32) + ':0' });
+    await fp.send(config.demoRecipient, 200n);
+    expect(fp.ticket.value).not.toBeNull();
+    expect(store.getPin()).toBeNull();
+  });
+
+  it('two tabs past the first check at once: the second re-checks right before the wallet prompt and stops', async () => {
+    const store = memoryStore();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const sign0 = h.manager.signTransaction;
+    h.manager.signTransaction = async (x: unknown) => { await gate; return sign0(x); };
+    const tabA = useFeePass({ store });
+    fund(tabA);
+    const tabB = useFeePass({ store });
+    for (const t of [tabA, tabB]) { await t.resumePending(); await t.scan(); }
+    const a = tabA.send(config.demoRecipient, 10n);
+    const b = tabB.send(config.demoRecipient, 10n); // same tick: neither saw a lock at its first check
+    await b;
+    expect(tabB.notice.value!.code).toBe('SEND_IN_PROGRESS');
+    release();
+    await a;
+    expect(tabA.ticket.value).not.toBeNull();
+    expect(h.signCalls).toBe(1);
+  });
+
+  it("a tab releases only its own signing lock, never another tab's", async () => {
+    const store = memoryStore();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const sign0 = h.manager.signTransaction;
+    h.manager.signTransaction = async (x: unknown) => { await gate; return sign0(x); };
+    const tabA = useFeePass({ store });
+    fund(tabA);
+    await tabA.resumePending();
+    await tabA.scan();
+    const a = tabA.send(config.demoRecipient, 10n);
+    for (let i = 0; i < 10 && !store.getLock(); i++) await tick();
+    const foreign = { in0: 'aa'.repeat(32) + ':1', at: Date.now(), id: 'another-tab' };
+    store.setLock(foreign); // another tab took the lock (e.g. after a stale-lock takeover)
+    release();
+    await a;
+    expect(store.getLock()).toEqual(foreign);
+  });
+
   it('a re-send answered "missing inputs" after the coin was spent elsewhere says the coin changed', async () => {
     const store = memoryStore();
     const fp = useFeePass({ store });

@@ -87,7 +87,11 @@ evidence/                       measured JSON/CSV the docs and the UI quote
    signature (at most 2 re-signs, then "Pool busy"). Every re-sign spends the **same** user coin, so two versions of one
    payment can never both confirm.
 7. A pending-send record (localStorage, cross-tab lock, 30 min TTL) lets a reload resume: it asks the chain first, re-sends
-   the same bytes if the network never saw them, never re-signs. "Status unknown" keeps the signed bytes.
+   the same bytes if the network never saw them, never re-signs. "Status unknown" keeps the signed bytes. Starting over (or
+   an expired record) leaves a coin pin: the next send must spend that same coin until the coin or the old version's lane is
+   spent, so a version that was live on another server and the new one can never both confirm. The signing lock carries a
+   per-request id, is re-checked right before the wallet prompt, and a tab only releases its own (localStorage has no
+   compare-and-set, so this narrows the cross-tab window rather than closing it).
 8. The ticket re-reads the transaction: PUSD sent, fee paid, the actual pool subsidy (miner fee plus the top-up), the paid
    lane, and the spendable-BCH before and after. The "your BCH balance didn't change" line only appears when both snapshots were measured.
 

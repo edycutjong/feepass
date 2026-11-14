@@ -58,7 +58,14 @@ export class RelayTimeoutError extends Error {
 
 /** Held from the moment a wallet is asked to sign until the signed tx is recorded (or the request ends), so a second tab
  *  cannot ask for a conflicting signature while the first one is still in the wallet. */
-export interface SigningLock { in0: string; at: number }
+export interface SigningLock { in0: string; at: number; /** Per request: a tab releases only its own lock. */ id?: string }
+
+/**
+ * Left when a signed version is cleared without being seen on chain (start over, an expired record): that version may still
+ * be live on another server, so the next send must spend the SAME coin, and at most one can ever confirm. It lifts itself
+ * once that coin or that version's lane is spent (then the old version can never confirm).
+ */
+export interface CoinPin { in0: string; ownerAddress: string; laneOutpoint: string; at: number }
 /** Longer than the 3-minute signing timeout: a lock older than this was left by a closed tab. */
 export const SIGNING_LOCK_MS = 4 * 60 * 1000;
 
@@ -69,17 +76,22 @@ export interface PendingStore {
   clear(txid?: string): void;
   getLock(): SigningLock | null;
   setLock(l: SigningLock | null): void;
+  getPin(): CoinPin | null;
+  setPin(p: CoinPin | null): void;
 }
 
 export function memoryStore(): PendingStore {
   let v: PendingSend | null = null;
   let lock: SigningLock | null = null;
+  let pin: CoinPin | null = null;
   return {
     load: () => v,
     save: (p) => (v = p),
     clear: (txid) => { if (!txid || v?.txid === txid) v = null; },
     getLock: () => lock,
     setLock: (l) => (lock = l),
+    getPin: () => pin,
+    setPin: (x) => (pin = x),
   };
 }
 
@@ -166,7 +178,23 @@ export async function runSend(d: FlowDeps, r: SendRequest): Promise<SendSuccess>
   if (store.load()) throw new FlowError('SEND_IN_PROGRESS', 'A send from this browser is still pending. Resolve it first (re-send the same transaction or start over).');
   const held = store.getLock();
   if (held && now() - held.at < SIGNING_LOCK_MS) throw new FlowError('SEND_IN_PROGRESS', 'A wallet signature is already being requested from this browser (this or another tab). Finish or cancel it in the wallet first.');
-  if (r.coins.length === 0) throw new FlowError('NO_COIN', 'None of your PUSD coins can carry this amount plus the fee and 0.01 PUSD change.');
+  const lockId = `${now()}-${Math.random().toString(36).slice(2)}`;
+  let coins = r.coins;
+  const pin = store.getPin();
+  if (pin) {
+    // an earlier signed version may still be live: reuse its coin until that coin or its lane is spent
+    const [coinLive, laneLive] = await Promise.all([
+      coinUnspent(d.provider, pin.ownerAddress, pin.in0),
+      d.provider.getUtxos(d.pool.tokenAddress).then((u) => u.some((x) => outpointOf(x) === pin.laneOutpoint)),
+    ]);
+    if (!coinLive || !laneLive) store.setPin(null);
+    else {
+      coins = r.coins.filter((c) => outpointOf(c) === pin.in0);
+      if (coins.length === 0)
+        throw new FlowError('NO_COIN', 'An earlier signed send from this browser could still confirm, so a new send must reuse its coin (only one can ever confirm), and that coin cannot carry this amount plus the fee and 0.01 PUSD change. Send less, or try again once that version can no longer confirm.');
+    }
+  }
+  if (coins.length === 0) throw new FlowError('NO_COIN', 'None of your PUSD coins can carry this amount plus the fee and 0.01 PUSD change.');
   const excluded = new Set<string>();
   let coin: UserCoin | undefined;
   let signatures = 0;
@@ -183,7 +211,7 @@ export async function runSend(d: FlowDeps, r: SendRequest): Promise<SendSuccess>
     // Choose in0 once; every later version of this send spends the same coin.
     let send: SponsoredSend | undefined;
     let lastCoinError = '';
-    for (const c of coin ? [coin] : r.coins) {
+    for (const c of coin ? [coin] : coins) {
       try {
         send = buildSponsoredSend({
           pool: d.pool, params: d.params, categoryDisplay: d.categoryDisplay,
@@ -212,7 +240,11 @@ export async function runSend(d: FlowDeps, r: SendRequest): Promise<SendSuccess>
     const req = toWizardRequest(send, { pathName: c.owner.pathName, addressIndex: c.owner.addressIndex }, 'FeePass: send PUSD, the pool pays the BCH network fee');
     let pending: PendingSend;
     let verified: VerifiedTx;
-    store.setLock({ in0: outpointOf(c), at: now() });
+    // re-checked here, after the awaits above and right before taking the lock: another tab may have started meanwhile
+    const other = store.getLock();
+    if (store.load() || (other && other.id !== lockId && now() - other.at < SIGNING_LOCK_MS))
+      throw new FlowError('SEND_IN_PROGRESS', 'A wallet signature is already being requested from this browser (this or another tab). Finish or cancel it in the wallet first.');
+    store.setLock({ in0: outpointOf(c), at: now(), id: lockId });
     try {
       let signedHex: string;
       try {
@@ -233,12 +265,13 @@ export async function runSend(d: FlowDeps, r: SendRequest): Promise<SendSuccess>
       };
       store.save(pending); // recorded BEFORE the lock is released and before the first broadcast
     } finally {
-      store.setLock(null);
+      if (store.getLock()?.id === lockId) store.setLock(null); // never release another tab's lock
     }
     d.onEvent?.({ stage: 'broadcasting', lane, txid: verified.txid });
 
     const outcome = await broadcastOnce(d, pending, lane, sleep);
     if (outcome === 'ok') {
+      store.setPin(null); // in0 is spent by this send: no earlier version of it can confirm now
       return { txid: verified.txid, hex: verified.hex, verified, lane, send, coin: c, proposed: req.proposed, signatures };
     }
     if (outcome === 'coin-changed') {

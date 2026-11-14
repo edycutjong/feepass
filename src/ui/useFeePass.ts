@@ -11,7 +11,7 @@ import { buildBoard, type Board } from '../core/lanes';
 import { computeTicket, type Ticket } from '../core/receipt';
 import {
   checkPending, FlowError, PENDING_TTL_MS, proposedFromPending, rebroadcast, RelayTimeoutError, runSend,
-  type FlowErrorCode, type FlowEvent, type PendingSend, type PendingStore, type SigningLock,
+  type CoinPin, type FlowErrorCode, type FlowEvent, type PendingSend, type PendingStore, type SigningLock,
 } from '../core/sendFlow';
 import type { SponsoredSend } from '../core/sponsoredSend';
 import { candidateCoins, maxSendUnits, scanWallet, type WalletScan } from '../core/walletScan';
@@ -20,6 +20,7 @@ import type { WizardSignRequest } from '../core/wizard';
 const SIGN_TIMEOUT_MS = 180_000;
 const PENDING_KEY = 'feepass.pending.v1';
 const LOCK_KEY = 'feepass.signing.v1';
+const PIN_KEY = 'feepass.pin.v1';
 
 function readJson<T>(key: string): T | null {
   try {
@@ -37,7 +38,12 @@ export const localStore: PendingStore = {
   clear: (txid) => { if (!txid || readJson<PendingSend>(PENDING_KEY)?.txid === txid) localStorage.removeItem(PENDING_KEY); },
   getLock: () => readJson<SigningLock>(LOCK_KEY),
   setLock: (l) => (l ? localStorage.setItem(LOCK_KEY, JSON.stringify(l)) : localStorage.removeItem(LOCK_KEY)),
+  getPin: () => readJson<CoinPin>(PIN_KEY),
+  setPin: (x) => (x ? localStorage.setItem(PIN_KEY, JSON.stringify(x)) : localStorage.removeItem(PIN_KEY)),
 };
+
+/** A cleared record whose version was never seen on chain may still be live elsewhere: pin its coin for the next send. */
+const pinFrom = (rec: PendingSend): CoinPin => ({ in0: rec.in0, ownerAddress: rec.ownerAddress, laneOutpoint: rec.laneOutpoint, at: Date.now() });
 
 export type Phase = 'idle' | 'starting' | 'signing' | 'broadcasting' | 'waiting-lane' | 'retrying' | 'done';
 export interface Notice { code: FlowErrorCode | 'PENDING' | 'SCAN' | 'CHAIN' | 'BAD_RECIPIENT' | 'DISCARDED'; message: string }
@@ -292,12 +298,13 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
             : 'A send from this browser is still pending. Re-send the same signed transaction, or start over with the same coin (any new version spends the same coin, so only one can ever confirm).',
         };
       } else {
+        if (st === 'expired') store.setPin(pinFrom(rec)); // the next send reuses this coin while the old version could confirm
         store.clear(rec.txid);
         notice.value = {
           code: 'DISCARDED',
           message: st === 'superseded'
             ? 'A pending send from this browser never reached the network, and its PUSD coin has since been spent by another transaction. Nothing more was signed.'
-            : `A pending send from this browser (older than ${PENDING_TTL_MS / 60000} minutes) never reached the network and was discarded. Your coin can be sent again.`,
+            : `A pending send from this browser (older than ${PENDING_TTL_MS / 60000} minutes) was not seen on the network and was discarded. Your next send reuses the same coin, so at most one of them can ever confirm.`,
         };
       }
     } finally {
@@ -352,8 +359,10 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
         return;
       }
     }
-    if (validRecord(loaded)) store.clear(loaded.txid);
-    else if (loaded) store.clear(); // corrupt record: never a permanent block
+    if (validRecord(loaded)) {
+      store.setPin(pinFrom(loaded)); // not seen on chain, maybe live elsewhere: the next send must reuse its coin
+      store.clear(loaded.txid);
+    } else if (loaded) store.clear(); // corrupt record: never a permanent block
     pending.value = null;
     notice.value = null;
     ticket.value = null;
