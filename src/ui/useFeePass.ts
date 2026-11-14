@@ -43,7 +43,7 @@ export const localStore: PendingStore = {
 };
 
 /** A cleared record whose version was never seen on chain may still be live elsewhere: pin its coin for the next send. */
-const pinFrom = (rec: PendingSend): CoinPin => ({ in0: rec.in0, ownerAddress: rec.ownerAddress, laneOutpoint: rec.laneOutpoint, at: Date.now() });
+const pinFrom = (rec: PendingSend): CoinPin => ({ ...rec, pinnedAt: Date.now() });
 
 export type Phase = 'idle' | 'starting' | 'signing' | 'broadcasting' | 'waiting-lane' | 'retrying' | 'done';
 export interface Notice { code: FlowErrorCode | 'PENDING' | 'SCAN' | 'CHAIN' | 'BAD_RECIPIENT' | 'DISCARDED'; message: string }
@@ -246,6 +246,9 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
         await resumePending();
         // nothing to resume (e.g. another tab is still waiting on its wallet): say why this send did not start
         if (!notice.value && !sentTxid.value) notice.value = { code: e.code, message: e.message };
+      } else if (e instanceof FlowError && e.code === 'EARLIER_SEND_LANDED' && e.pending) {
+        ticketFromRecord(e.pending); // the earlier version is the payment: show its ticket, never a pending prompt
+        notice.value = { code: e.code, message: e.message };
       } else if (e instanceof FlowError) {
         notice.value = { code: e.code, message: e.message };
         if (e.pending) pending.value = e.pending;
@@ -338,6 +341,7 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
     }
     if (st === 'seen') { ticketFromRecord(rec); notice.value = null; return; }
     if (st === 'offline') { notice.value = { code: 'BROADCAST_UNKNOWN', message: 'The server rejected the re-send and could not be asked about the first version. The signed bytes are kept; try again shortly.' }; return; }
+    if (st === 'unknown' || st === 'expired') store.setPin(pinFrom(rec)); // unresolved: the next send must reuse this coin
     store.clear(rec.txid);
     pending.value = null;
     notice.value = st === 'superseded'

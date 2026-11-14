@@ -255,7 +255,7 @@ describe('useFeePass', () => {
     expect(h.signCalls).toBe(1);
   });
 
-  it('start over after an unknown broadcast pins the coin: the next send must reuse it until its old lane is spent', async () => {
+  it('start over after an unknown broadcast pins the coin; a missing lane does not lift it; the old version landing shows its ticket', async () => {
     const store = memoryStore();
     const fp = useFeePass({ store });
     fund(fp); // one user coin: 100 units
@@ -265,23 +265,64 @@ describe('useFeePass', () => {
     h.chain.sendRawTransaction = async () => { throw new Error('socket closed'); };
     await fp.send(config.demoRecipient, 10n);
     expect(fp.notice.value!.code).toBe('BROADCAST_UNKNOWN');
-    const in0 = store.load()!.in0;
+    const rec = store.load()!;
     h.chain.sendRawTransaction = real;
     await fp.startOver();
     expect(store.load()).toBeNull();
-    expect(store.getPin()!.in0).toBe(in0);
-    // a bigger coin arrives; a send only it can carry is refused while the old version could still confirm
+    expect(store.getPin()!.in0).toBe(rec.in0);
+    // a bigger coin arrives; a send only it can carry is refused while the old version is unresolved
     h.chain.addUtxo(me.tokenAddress, randomUtxo({ satoshis: 1400n, token: { category: config.categoryDisplay, amount: 500n } }));
     await fp.scan();
     await fp.send(config.demoRecipient, 200n);
     expect(fp.notice.value!.code).toBe('NO_COIN');
     expect(fp.notice.value!.message).toMatch(/reuse its coin/);
-    expect(h.signCalls).toBe(1);
-    // once the old version's lane is gone it can never confirm: the pin lifts and the other coin is used
+    // a lane this server does not list is NOT evidence the old version is dead (propagation lag): the pin stays
     store.setPin({ ...store.getPin()!, laneOutpoint: '00'.repeat(32) + ':0' });
     await fp.send(config.demoRecipient, 200n);
+    expect(fp.notice.value!.code).toBe('NO_COIN');
+    expect(h.signCalls).toBe(1);
+    // the old version turns up on chain: its ticket is shown, nothing new is signed, the pin is gone
+    await real(rec.hex);
+    await fp.send(config.demoRecipient, 200n);
+    expect(fp.notice.value!.code).toBe('EARLIER_SEND_LANDED');
+    expect(fp.sentTxid.value).toBe(rec.txid);
+    expect(h.signCalls).toBe(1);
+    expect(store.getPin()).toBeNull();
+  });
+
+  it('a pinned coin that is gone: kept for 10 minutes (lag), then released, and the send uses another coin', async () => {
+    const store = memoryStore();
+    const fp = useFeePass({ store });
+    fund(fp);
+    await fp.resumePending();
+    await fp.scan();
+    const ghost = { in0: 'ab'.repeat(32) + ':0', ownerAddress: me.address, txid: 'cd'.repeat(32), hex: '00', laneOutpoint: 'ef'.repeat(32) + ':0',
+      laneNumber: 1, excluded: [], startedAt: Date.now(), proposed: '{}' };
+    store.setPin({ ...ghost, pinnedAt: Date.now() - 60_000 });
+    await fp.send(config.demoRecipient, 10n);
+    expect(fp.notice.value!.code).toBe('NO_COIN'); // gone for a minute: could be lag, so the pin holds
+    expect(h.signCalls).toBe(0);
+    store.setPin({ ...ghost, pinnedAt: Date.now() - 11 * 60_000 });
+    await fp.send(config.demoRecipient, 10n);
     expect(fp.ticket.value).not.toBeNull();
     expect(store.getPin()).toBeNull();
+  });
+
+  it('a re-send that fails on an expired record leaves a pin (the next send cannot pick another coin)', async () => {
+    const store = memoryStore();
+    const fp = useFeePass({ store });
+    fund(fp);
+    await fp.resumePending();
+    await fp.scan();
+    h.chain.sendRawTransaction = async () => { throw new Error('socket closed'); };
+    await fp.send(config.demoRecipient, 10n);
+    expect(fp.pending.value).not.toBeNull();
+    const rec = store.load()!;
+    fp.pending.value = { ...rec, startedAt: Date.now() - 31 * 60_000 }; // the record expired while the notice was open
+    h.chain.sendRawTransaction = async () => { throw new Error('bad-txns-inputs-missingorspent'); };
+    await fp.resendPending();
+    expect(store.load()).toBeNull();
+    expect(store.getPin()!.txid).toBe(rec.txid);
   });
 
   it('two tabs past the first check at once: the second re-checks right before the wallet prompt and stops', async () => {

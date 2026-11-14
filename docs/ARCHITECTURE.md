@@ -87,9 +87,11 @@ evidence/                       measured JSON/CSV the docs and the UI quote
    signature (at most 2 re-signs, then "Pool busy"). Every re-sign spends the **same** user coin, so two versions of one
    payment can never both confirm.
 7. A pending-send record (localStorage, cross-tab lock, 30 min TTL) lets a reload resume: it asks the chain first, re-sends
-   the same bytes if the network never saw them, never re-signs. "Status unknown" keeps the signed bytes. Starting over (or
-   an expired record) leaves a coin pin: the next send must spend that same coin until the coin or the old version's lane is
-   spent, so a version that was live on another server and the new one can never both confirm. The signing lock carries a
+   the same bytes if the network never saw them, never re-signs. "Status unknown" keeps the signed bytes. Starting over, an
+   expired record or a failed re-send leaves a coin pin (the whole record): the next send must spend that same coin, so a
+   version that was live on another server and the new one can never both confirm. It lifts only on positive evidence: the
+   old version is seen (its ticket is shown and nothing new is signed), a new send spends the coin, or the coin has been gone
+   for 10 minutes with the old version still unseen. A lane this server does not list is not evidence (propagation lag). The signing lock carries a
    per-request id, is re-checked right before the wallet prompt, and a tab only releases its own (localStorage has no
    compare-and-set, so this narrows the cross-tab window rather than closing it).
 8. The ticket re-reads the transaction: PUSD sent, fee paid, the actual pool subsidy (miner fee plus the top-up), the paid

@@ -4,7 +4,7 @@ import type { Notice } from './useFeePass';
 defineProps<{ notice: Notice; canResend: boolean; busy?: boolean }>();
 defineEmits<{ resend: []; startOver: []; dismiss: [] }>();
 const titles: Record<string, string> = {
-  NO_COIN: 'No coin fits this send', RELAY_TIMEOUT: 'Wallet did not answer', SEND_IN_PROGRESS: 'Send in progress', BAD_RECIPIENT: 'Check the address', DISCARDED: 'Old pending send discarded', POOL_EMPTY: 'No open lane', POOL_BUSY: 'Pool busy', WALLET_REJECTED: 'Not signed',
+  NO_COIN: 'No coin fits this send', EARLIER_SEND_LANDED: 'Your earlier send landed', RELAY_TIMEOUT: 'Wallet did not answer', SEND_IN_PROGRESS: 'Send in progress', BAD_RECIPIENT: 'Check the address', DISCARDED: 'Old pending send discarded', POOL_EMPTY: 'No open lane', POOL_BUSY: 'Pool busy', WALLET_REJECTED: 'Not signed',
   NONCONFORMANT_SIGHASH: "This wallet's signature can't be used", WALLET_CHANGED_TX: 'The wallet changed the transaction',
   COIN_CHANGED: 'Your coin changed', BROADCAST_UNKNOWN: 'Broadcast status unknown', PENDING: 'Send in progress',
   SCAN: 'Could not read your wallet', CHAIN: 'Something went wrong',

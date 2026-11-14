@@ -15,6 +15,7 @@ import { toWizardRequest, verifySignedTx, VerifyError, type VerifiedTx, type Wiz
 
 export type FlowErrorCode =
   | 'NO_COIN'
+  | 'EARLIER_SEND_LANDED'
   | 'POOL_EMPTY'
   | 'POOL_BUSY'
   | 'WALLET_REJECTED'
@@ -61,11 +62,15 @@ export class RelayTimeoutError extends Error {
 export interface SigningLock { in0: string; at: number; /** Per request: a tab releases only its own lock. */ id?: string }
 
 /**
- * Left when a signed version is cleared without being seen on chain (start over, an expired record): that version may still
- * be live on another server, so the next send must spend the SAME coin, and at most one can ever confirm. It lifts itself
- * once that coin or that version's lane is spent (then the old version can never confirm).
+ * Left when a signed version is cleared without being seen on chain (start over, an expired record, a failed re-send): that
+ * version may still be live on another server, so the next send must spend the SAME coin, and at most one can ever confirm.
+ * The whole record is kept, so if the old version turns up its ticket can be shown. Released only on positive evidence: the
+ * old version is seen, a new send spends the coin, or the coin has been gone from the owner's coins for PIN_RELEASE_MS with
+ * the old version still unseen. Never on "this server does not list the lane" (that can be propagation lag).
  */
-export interface CoinPin { in0: string; ownerAddress: string; laneOutpoint: string; at: number }
+export interface CoinPin extends PendingSend { pinnedAt: number }
+/** Long enough for a propagation lag to clear; a coin missing that long was spent by another tx. */
+export const PIN_RELEASE_MS = 10 * 60 * 1000;
 /** Longer than the 3-minute signing timeout: a lock older than this was left by a closed tab. */
 export const SIGNING_LOCK_MS = 4 * 60 * 1000;
 
@@ -182,16 +187,21 @@ export async function runSend(d: FlowDeps, r: SendRequest): Promise<SendSuccess>
   let coins = r.coins;
   const pin = store.getPin();
   if (pin) {
-    // an earlier signed version may still be live: reuse its coin until that coin or its lane is spent
-    const [coinLive, laneLive] = await Promise.all([
-      coinUnspent(d.provider, pin.ownerAddress, pin.in0),
-      d.provider.getUtxos(d.pool.tokenAddress).then((u) => u.some((x) => outpointOf(x) === pin.laneOutpoint)),
-    ]);
-    if (!coinLive || !laneLive) store.setPin(null);
-    else {
-      coins = r.coins.filter((c) => outpointOf(c) === pin.in0);
-      if (coins.length === 0)
-        throw new FlowError('NO_COIN', 'An earlier signed send from this browser could still confirm, so a new send must reuse its coin (only one can ever confirm), and that coin cannot carry this amount plus the fee and 0.01 PUSD change. Send less, or try again once that version can no longer confirm.');
+    // an earlier signed version may still be live somewhere: positive evidence only (see CoinPin)
+    const seen = await d.provider.getRawTransaction(pin.txid).then((x) => !!x, () => false);
+    if (seen) {
+      store.setPin(null);
+      throw new FlowError('EARLIER_SEND_LANDED', 'Your earlier send from this browser landed after all, so this one was not made. Its ticket is shown; send again only if you meant a second payment.', pin);
+    }
+    coins = r.coins.filter((c) => outpointOf(c) === pin.in0);
+    if (coins.length === 0) {
+      const coinGone = !(await coinUnspent(d.provider, pin.ownerAddress, pin.in0));
+      if (coinGone && now() - pin.pinnedAt > PIN_RELEASE_MS) {
+        store.setPin(null); // spent by another tx long ago, and the old version never showed up: it can never confirm
+        coins = r.coins;
+      } else {
+        throw new FlowError('NO_COIN', 'An earlier signed send from this browser is unresolved, so a new send must reuse its coin (only one can ever confirm), and that coin cannot carry this amount plus the fee and 0.01 PUSD change. Send less, or rescan in a few minutes.');
+      }
     }
   }
   if (coins.length === 0) throw new FlowError('NO_COIN', 'None of your PUSD coins can carry this amount plus the fee and 0.01 PUSD change.');
