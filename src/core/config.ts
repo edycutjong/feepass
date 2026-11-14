@@ -17,6 +17,8 @@ export interface AppConfig {
   demoRecipient: string;
   demoAmountUnits: bigint;
   repoUrl: string;
+  /** The team's CashTokens-format address shown in the header (organizer rule: votes and payout go here). */
+  payoutAddress: string;
 }
 
 export class ConfigError extends Error {}
@@ -26,6 +28,7 @@ export function parseConfig(j: typeof raw): AppConfig {
   if (j.network !== 'mainnet') throw new ConfigError(`config network is "${j.network}", the app only runs on mainnet`);
   if (!/^[0-9a-f]{64}$/.test(j.pusdCategory)) throw new ConfigError('pusdCategory must be 32-byte display-order hex');
   if (!j.explorerTx.startsWith('https://')) throw new ConfigError('explorerTx must be an https URL');
+  if (!j.payoutAddress.startsWith('bitcoincash:z')) throw new ConfigError('payoutAddress must be a mainnet token-aware address');
   if (!j.demoRecipient.startsWith('bitcoincash:z')) throw new ConfigError('demoRecipient must be a mainnet token-aware address');
   const params: PoolParams = {
     feeTokens: BigInt(j.constructor.feeTokens),
@@ -45,6 +48,7 @@ export function parseConfig(j: typeof raw): AppConfig {
     demoRecipient: j.demoRecipient,
     demoAmountUnits: BigInt(j.demoAmountUnits),
     repoUrl: j.repoUrl,
+    payoutAddress: j.payoutAddress,
   };
 }
 

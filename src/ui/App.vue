@@ -18,8 +18,7 @@ const { wc } = fp;
 const isPool = typeof location !== 'undefined' && location.pathname.replace(/\/+$/, '') === '/pool';
 const showQr = ref(false);
 const fee = formatUnits(config.params.feeTokens, config.decimals);
-const ticketAt = ref('');
-const busy = computed(() => !['idle', 'done'].includes(fp.phase.value));
+const busy = computed(() => fp.resuming.value || !['idle', 'done'].includes(fp.phase.value));
 const chosenNumber = computed(() => fp.board.value?.lanes.find((l) => l.outpoint === fp.activeLane.value)?.number ?? null);
 
 function connect() {
@@ -27,16 +26,15 @@ function connect() {
 }
 const stopQr = computed(() => fp.connected.value);
 
-async function onSend(recipient: string, amount: bigint) {
-  await fp.send(recipient, amount);
-  if (fp.ticket.value) ticketAt.value = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+function onSend(recipient: string, amount: bigint) {
+  void fp.send(recipient, amount);
 }
 
 let timer: ReturnType<typeof setInterval> | undefined;
 onMounted(() => {
   void fp.refreshChain();
   void fp.refreshBoard();
-  void fp.resumePending().then(() => { if (fp.ticket.value) ticketAt.value = 'resumed'; });
+  void fp.resumePending();
   timer = setInterval(() => { if (!busy.value) void fp.refreshBoard(); }, 20_000);
 });
 onBeforeUnmount(() => clearInterval(timer));
@@ -45,13 +43,13 @@ const bch = (s: bigint | null) => (s === null ? 'unknown' : (Number(s) / 1e8).to
 
 <template>
   <AppHeader :height="fp.height.value" :chain-error="fp.chainError.value" :connected="fp.connected.value"
-    :wallet-name="wc.walletName.value" :repo-url="config.repoUrl" @connect="connect" @disconnect="wc.disconnect()" />
+    :wallet-name="wc.walletName.value" :repo-url="config.repoUrl" :payout="config.payoutAddress" @connect="connect" @disconnect="wc.disconnect()" />
 
   <PoolPage v-if="isPool" :cfg="config" :board="fp.board.value" :error="fp.boardError.value"
     :contract-address="fp.pool.address" :token-address="fp.pool.tokenAddress" />
 
   <main v-else class="wrap">
-    <section class="hero" v-if="!fp.connected.value && !fp.ticket.value">
+    <section class="hero" v-if="!fp.connected.value && !fp.sentTxid.value">
       <h1 class="display">Send dollars. No spendable BCH needed.</h1>
       <p class="lede">Pay the Bitcoin Cash network fee in PUSD. A covenant pays the fee; you pay {{ fee }} PUSD in the same transaction.</p>
       <button type="button" class="btn big" @click="connect">Connect wallet</button>
@@ -63,8 +61,13 @@ const bch = (s: bigint | null) => (s === null ? 'unknown' : (Number(s) / 1e8).to
     <StateNotice v-if="fp.notice.value" :notice="fp.notice.value" :can-resend="!!fp.pending.value"
       @resend="fp.resendPending()" @start-over="fp.startOver()" @dismiss="fp.notice.value = null" />
 
-    <template v-if="fp.ticket.value">
-      <TicketCard :ticket="fp.ticket.value" :lane="fp.ticketLane.value" :explorer-tx="config.explorerTx" :fee="fee" :at="ticketAt" />
+    <template v-if="fp.sentTxid.value">
+      <TicketCard v-if="fp.ticket.value" :ticket="fp.ticket.value" :lane="fp.ticketLane.value" :explorer-tx="config.explorerTx" :fee="fee" :at="fp.ticketAt.value" />
+      <section v-else class="panel" data-testid="sent-fallback">
+        <h2>Sent</h2>
+        <p>The network accepted the transaction. <a :href="config.explorerTx + fp.sentTxid.value" target="_blank" rel="noopener">View it on the explorer ↗</a></p>
+        <p class="data muted">{{ fp.sentTxid.value }}</p>
+      </section>
       <p class="again"><button type="button" class="btn ghost" @click="fp.startOver()">Send again</button></p>
     </template>
 
@@ -76,7 +79,7 @@ const bch = (s: bigint | null) => (s === null ? 'unknown' : (Number(s) / 1e8).to
           <span class="data" data-testid="spendable">{{ fp.wallet.value ? bch(fp.wallet.value.spendableBchSats) : '…' }}</span></div>
         <p v-if="fp.wallet.value && fp.wallet.value.failedLookups" class="muted small">
           {{ fp.wallet.value.failedLookups }} of {{ fp.wallet.value.lookups }} address lookups failed; spendable BCH is unknown until a rescan succeeds.</p>
-        <p v-if="fp.wallet.value && fp.wallet.value.coins.length === 0" class="nopusd">
+        <p v-if="fp.wallet.value && fp.wallet.value.coins.length === 0 && !fp.wallet.value.failedLookups" class="nopusd">
           ✕ No PUSD found on mainnet in the addresses this wallet shared. <span class="muted">Is your wallet set to mainnet?</span></p>
         <button type="button" class="linkbtn" :disabled="fp.scanning.value" @click="fp.scan()">{{ fp.scanning.value ? 'Reading mainnet…' : 'Rescan' }}</button>
       </section>
@@ -87,8 +90,9 @@ const bch = (s: bigint | null) => (s === null ? 'unknown' : (Number(s) / 1e8).to
           <p v-if="fp.signingSend.value" class="muted">Your wallet will list 3 outputs: {{ formatUnits(fp.signingSend.value.outputs.changeUnits) }} PUSD back to you,
             {{ formatUnits(fp.signingSend.value.outputs.laneUnits) }} PUSD to the pool (the lane's own PUSD plus your {{ fee }} fee), and your send. Network fee
             {{ fp.signingSend.value.minerFeeSats }} sats, paid by the lane.</p>
-          <p v-if="fp.signatures.value > 1" class="muted">The first lane was taken by another send; this is signature {{ fp.signatures.value }}, same coin.</p>
+          <p v-if="fp.signatures.value > 1" class="muted">{{ fp.retryReason.value === 'lane-conflict' ? 'The previous lane was taken by another send' : 'The previous lane could not be used' }}; this is signature {{ fp.signatures.value }}, same coin.</p>
         </template>
+        <p v-else-if="fp.phase.value === 'starting'" class="display step">Reading the pool…</p>
         <p v-else-if="fp.phase.value === 'broadcasting'" class="display step">Broadcasting…</p>
         <p v-else-if="fp.phase.value === 'waiting-lane'" class="display step">Lane still propagating · {{ fp.waitSeconds.value }} s</p>
         <p v-else-if="fp.phase.value === 'retrying'" class="display step">Lane busy · picking another</p>
@@ -98,7 +102,7 @@ const bch = (s: bigint | null) => (s === null ? 'unknown' : (Number(s) / 1e8).to
         :board="fp.board.value" :pool="fp.pool" :max-units="fp.maxUnits.value" :busy="busy" @send="onSend" />
     </template>
 
-    <section class="how" v-if="!fp.connected.value && !fp.ticket.value">
+    <section class="how" v-if="!fp.connected.value && !fp.sentTxid.value">
       <h2 class="display">How it works</h2>
       <ol>
         <li>Connect a WizardConnect wallet that holds PUSD. It needs no spendable BCH.</li>
