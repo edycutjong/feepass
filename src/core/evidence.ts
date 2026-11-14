@@ -12,6 +12,8 @@ export function standardSend(sends: readonly MeasuredSend[] = shape.sends): Meas
 
 export const measured = {
   send: standardSend(),
+  /** Largest measured lane cost: a small user coin, where the lane also tops up the token output's dust. */
+  maxMeasuredSubsidySats: Math.max(...shape.sends.map((s) => s.poolSubsidySats)),
   maxSubsidySats: shape.params.maxSubsidy,
   redeemScriptBytes: shape.redeemScriptBytes,
 };

@@ -49,26 +49,35 @@ describe('FrontPage', () => {
   it('receipts come from the evidence file', () => {
     const w = mount(FrontPage, { props: { ...props, board: emptyBoard } });
     expect(w.findAll('[data-testid=receipt-num]').map((n) => n.text())).toEqual(
-      [measured.send.minerFeeSats, measured.send.signedSizeBytes, measured.maxSubsidySats, measured.redeemScriptBytes].map((n) => n.toLocaleString('en-US')));
+      ['0.01', ...[measured.send.minerFeeSats, measured.maxSubsidySats, measured.send.signedSizeBytes].map((n) => n.toLocaleString('en-US'))]);
   });
-  it('unfunded pool: says "pool not open yet" and shows the honest not-open line', () => {
+  it('unfunded pool: says the pool is not open and shows the honest not-funded line; the sample disclosure is always there', () => {
     const w = mount(FrontPage, { props: { ...props, board: emptyBoard } });
-    expect(w.get('[data-testid=front-status]').text()).toContain('pool not open yet');
+    expect(w.get('[data-testid=front-status]').text()).toContain('The pool is not open yet.');
     expect(w.find('[data-testid=honest-pool]').exists()).toBe(true);
+    expect(w.text()).toContain('The ticket above is a sample');
+  });
+  it('the drain answer states the measured lane cost and that the total is not bounded', () => {
+    const w = mount(FrontPage, { props: { ...props, board: emptyBoard } });
+    const faq = w.findAll('details').map((d) => d.text()).find((t) => t.includes('draining'))!;
+    expect(faq).toContain(`${measured.send.minerFeeSats} sats for a standard send`);
+    expect(faq).toContain(String(measured.maxMeasuredSubsidySats));
+    expect(faq).toContain('bounds each send, not the total');
   });
   it('board still loading or failed: no not-open claim either way', () => {
     const loading = mount(FrontPage, { props: { ...props, board: null } });
-    expect(loading.get('[data-testid=front-status]').text()).toContain('reading the pool');
+    expect(loading.get('[data-testid=front-status]').text()).toContain('Reading the pool');
     expect(loading.find('[data-testid=honest-pool]').exists()).toBe(false);
+    expect(loading.text()).toContain('The ticket above is a sample');
     const failed = mount(FrontPage, { props: { ...props, board: null, error: 'timeout' } });
-    expect(failed.get('[data-testid=front-status]').text()).toContain('pool status unavailable');
+    expect(failed.get('[data-testid=front-status]').text()).toContain('Pool status unavailable');
   });
   it('a funded pool drops the not-open line and counts open lanes', () => {
     const utxo: SpendableUtxo = { txid: 'aa'.repeat(32), vout: 0, satoshis: 100_000n, lockingBytecode: '' } as SpendableUtxo;
     const lane: Lane = { number: 1, outpoint: `${utxo.txid}:0`, utxo, valueSats: 100_000n, pusdUnits: 1n, state: 'open' };
     const board: Board = { ...emptyBoard, lanes: [lane], open: 1 };
     const w = mount(FrontPage, { props: { ...props, board } });
-    expect(w.get('[data-testid=front-status]').text()).toContain('1 of 1 lanes open');
+    expect(w.get('[data-testid=front-status]').text()).toContain('1 of 1 lanes open.');
     expect(w.find('[data-testid=honest-pool]').exists()).toBe(false);
   });
   it('the hero button asks to connect', async () => {

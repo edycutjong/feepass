@@ -12,27 +12,24 @@ const props = defineProps<{ fee: string; board: Board | null; error: string; slo
 defineEmits<{ connect: [] }>();
 
 const std = measured.send;
-const receipts = [
-  { n: std.minerFeeSats, unit: 'sats', label: 'miner fee per send, paid by the lane', proof: 'evidence/tx-shape.json' },
-  { n: std.signedSizeBytes, unit: 'bytes', label: 'every send: one fixed shape, 2 inputs and 3 outputs', proof: 'evidence/tx-shape.json' },
-  { n: measured.maxSubsidySats, unit: 'sats', label: 'the most one lane can lose in one send', proof: 'src/config/mainnet.json' },
-  { n: measured.redeemScriptBytes, unit: 'bytes', label: 'the whole covenant, compiled', proof: 'evidence/tx-shape.json' },
-];
 const fmt = (n: number) => n.toLocaleString('en-US');
+/** n = a count-up target; text = a fixed figure (the fee is a decimal amount, not a count). */
+const receipts = computed(() => [
+  { n: null, text: props.fee, unit: 'PUSD', label: 'the only fee you pay, in the same transaction', proof: 'src/config/mainnet.json' },
+  { n: std.minerFeeSats, text: '', unit: 'sats', label: 'miner fee of a standard send, paid by the lane', proof: 'evidence/tx-shape.json' },
+  { n: measured.maxSubsidySats, text: '', unit: 'sats', label: 'the most one lane can lose in one send', proof: 'src/config/mainnet.json' },
+  { n: std.signedSizeBytes, text: '', unit: 'bytes', label: 'a standard send: 2 inputs, 3 outputs (Schnorr signature)', proof: 'evidence/tx-shape.json' },
+]);
 const contractUrl = computed(() => `${props.repoUrl}/blob/main/contracts/FeePassPool.cash`);
 const blob = (path: string) => `${props.repoUrl}/blob/main/${path}`;
 
 const lanesFunded = computed(() => props.board?.lanes.length ?? 0);
-const poolLine = computed(() => {
-  if (props.error) return 'pool status unavailable';
-  if (!props.board) return 'reading the pool…';
-  if (lanesFunded.value === 0) return 'pool not open yet';
-  return `${props.board.open} of ${lanesFunded.value} lanes open`;
-});
+const poolUnfunded = computed(() => !!props.board && lanesFunded.value === 0);
 
 // Count-ups: the text already holds the final number (print, screenshots, no motion); the animation only runs from 0 when the
-// receipt scrolls into view and the user has not asked for reduced motion.
-const shown = ref(receipts.map((r) => r.n));
+// receipt strip scrolls into view and the user has not asked for reduced motion.
+const k = ref(1);
+const shown = (n: number) => fmt(Math.round(n * k.value));
 const strip = ref<HTMLElement | null>(null);
 let io: IntersectionObserver | undefined;
 let raf = 0;
@@ -43,11 +40,11 @@ onMounted(() => {
     io?.disconnect();
     const t0 = performance.now();
     const tick = (t: number) => {
-      const k = Math.min(1, (t - t0) / 1100);
-      const ease = 1 - Math.pow(1 - k, 3);
-      shown.value = receipts.map((r) => Math.round(r.n * ease));
-      if (k < 1) raf = requestAnimationFrame(tick);
+      const p = Math.min(1, (t - t0) / 1100);
+      k.value = 1 - Math.pow(1 - p, 3);
+      if (p < 1) raf = requestAnimationFrame(tick);
     };
+    k.value = 0;
     raf = requestAnimationFrame(tick);
   }, { threshold: 0.4 });
   io.observe(strip.value);
@@ -58,25 +55,30 @@ onBeforeUnmount(() => { io?.disconnect(); cancelAnimationFrame(raf); });
 <template>
   <main class="front">
     <section class="hero wide">
+      <h1 class="display headline"><span class="l1">The lane <span class="plate-word">pays the fee.</span></span>
+        <span class="l2">You pay a cent.</span></h1>
+      <SampleBooth class="booth-slot" :fee="fee" />
       <div class="copy">
-        <h1 class="display headline"><span class="l1">The lane <span class="plate-word">pays the fee.</span></span>
-          <span class="l2">You pay a cent.</span></h1>
-        <p class="sub">Your wallet holds PUSD, a dollar CashToken, but no spendable BCH, and every Bitcoin Cash transaction needs a BCH fee.
-          FeePass adds one pool lane to your send: the lane pays the <strong class="data">{{ std.minerFeeSats }} sats</strong> miner fee,
-          the covenant takes back exactly <strong class="data">{{ fee }} PUSD</strong>, and your wallet signs only its own coin.</p>
+        <p class="plain">Send dollars on Bitcoin Cash with no spendable BCH.</p>
+        <p class="sub">A pool lane pays the <strong class="data">{{ std.minerFeeSats }} sats</strong> miner fee and the covenant takes back exactly
+          <strong class="data">{{ fee }} PUSD</strong>, in the same transaction. Your wallet signs only its own coin.</p>
         <div class="ctas">
           <button type="button" class="btn big" data-testid="hero-connect" @click="$emit('connect')">Connect wallet</button>
           <a class="btn big ghost" href="/deck/">Pitch deck</a>
         </div>
-        <p class="status data" data-testid="front-status">WizardConnect · mainnet only · {{ poolLine }}</p>
+        <p class="status" :class="{ closed: poolUnfunded }" data-testid="front-status">
+          <template v-if="error">Pool status unavailable right now. You can still connect and see your balances.</template>
+          <template v-else-if="!board">Reading the pool from mainnet…</template>
+          <template v-else-if="poolUnfunded"><strong>The pool is not open yet.</strong> You can connect and see your balances; sends start once lanes are funded.</template>
+          <template v-else><strong>{{ board.open }} of {{ lanesFunded }} lanes open.</strong> Connect a WizardConnect wallet that holds PUSD and send.</template>
+        </p>
       </div>
-      <SampleBooth :fee="fee" />
     </section>
 
     <section ref="strip" class="receipts" aria-label="Measured figures">
       <div class="wide grid">
-        <div v-for="(r, i) in receipts" :key="r.label" class="receipt">
-          <p class="fig"><span class="display num" data-testid="receipt-num">{{ fmt(shown[i] ?? r.n) }}</span> <span class="unit display">{{ r.unit }}</span></p>
+        <div v-for="r in receipts" :key="r.label" class="receipt">
+          <p class="fig"><span class="display num" data-testid="receipt-num">{{ r.n === null ? r.text : shown(r.n) }}</span> <span class="unit display">{{ r.unit }}</span></p>
           <p class="lbl">{{ r.label }}</p>
           <a class="proof data" :href="blob(r.proof)" target="_blank" rel="noopener">{{ r.proof }}</a>
         </div>
@@ -85,9 +87,9 @@ onBeforeUnmount(() => { io?.disconnect(); cancelAnimationFrame(raf); });
 
     <section class="live wide" aria-labelledby="live-h">
       <div class="live-head">
-        <h2 id="live-h" class="display">The plaza, live from mainnet</h2>
-        <p class="muted">Each signal head is one pool lane, read from a Fulcrum server: <strong>↓</strong> open, amber busy,
-          <strong>✕</strong> below the per-send cap, unlit not funded. A send takes one lane at random.</p>
+        <h2 id="live-h" class="display">The pool, live from mainnet</h2>
+        <p class="muted">Each signal head is one pool lane, read from a mainnet server: <strong>↓</strong> open, <strong>✕</strong> too low to
+          cover a full send. Unlit heads mean there is no lane to show yet (not funded, or still loading). A send takes one open lane at random.</p>
       </div>
       <LaneBoard :board="board" :error="error" :active="null" :chosen="null" :slots="slots" large />
       <p class="small"><a href="/pool">Open the pool page</a> for the covenant address and every lane's balance.</p>
@@ -129,14 +131,14 @@ onBeforeUnmount(() => { io?.disconnect(); cancelAnimationFrame(raf); });
         </article>
         <article class="rule">
           <h3 class="display">One fixed shape</h3>
-          <p>Two inputs, three outputs, the lane at input 1. Nothing else spends a lane.</p>
+          <p>Two inputs, three outputs, the lane at input 1. The only other way to spend a lane is the operator's key.</p>
           <pre class="code"><code>require(tx.inputs.length == 2);
 require(tx.outputs.length == 3);</code></pre>
         </article>
         <article class="rule retry">
           <h3 class="display">Random lane, same coin</h3>
-          <p>If another send takes your lane first, FeePass picks a new one and your wallet re-signs the <em>same</em> coin, so only one
-            version of your payment can ever confirm.</p>
+          <p>If another send takes your lane first, FeePass picks a new one and asks your wallet to sign again with the <em>same</em> coin
+            (up to two re-signs), so only one version of your payment can ever confirm.</p>
           <a class="small" :href="contractUrl" target="_blank" rel="noopener">Read the covenant source</a>
         </article>
       </div>
@@ -148,8 +150,10 @@ require(tx.outputs.length == 3);</code></pre>
         <ul>
           <li><strong>Not "zero BCH".</strong> A token coin always carries a few hundred sats of dust. What FeePass needs is no <em>spendable</em> BCH.</li>
           <li><strong>Not free, not gasless.</strong> You pay {{ fee }} PUSD per send. That is the fee, and the pool's revenue.</li>
-          <li><strong>Not your recipient picker.</strong> The covenant does not check who gets paid. Your own signature covers the outputs, as far as your wallet shows them.</li>
-          <li v-if="board && lanesFunded === 0" data-testid="honest-pool"><strong>Not open yet.</strong> The mainnet pool is not funded yet, so there is no mainnet send to show: the ticket above is a sample.</li>
+          <li><strong>Not the recipient's guard.</strong> The covenant does not check who gets paid. Your own signature covers the outputs, as far as your wallet shows them.</li>
+          <li><strong>Not a mainnet receipt.</strong> The ticket above is a sample: its figures are computed offline from the compiled covenant.<span
+            v-if="poolUnfunded" data-testid="honest-pool"> The mainnet pool is not funded yet.</span></li>
+          <li><strong>Not bounded in total.</strong> The covenant caps what each send can take from a lane; many sends can still use lanes up, and the operator refills them.</li>
           <li><strong>Not verified on a named wallet yet.</strong> Wallet results are recorded on the <a href="/gate.html">wallet gate page</a> by a person holding the wallet.</li>
         </ul>
       </div>
@@ -160,12 +164,12 @@ require(tx.outputs.length == 3);</code></pre>
       <details>
         <summary>Is it free?</summary>
         <p>No. You pay {{ fee }} PUSD per send, inside the same transaction, to the pool. The pool's lane pays the miner fee in BCH:
-          {{ std.minerFeeSats }} sats for the standard send.</p>
+          {{ std.minerFeeSats }} sats for a standard send.</p>
       </details>
       <details>
         <summary>Does my wallet need any BCH?</summary>
-        <p>No spendable BCH. Your PUSD coin carries its own few hundred sats, like every token coin. The ticket prints your spendable BCH
-          before and after the send, read from the chain.</p>
+        <p>No spendable BCH. Your PUSD coin carries its own few hundred sats, like every token coin. After a real send, the ticket prints
+          your spendable BCH before and after, read from the chain.</p>
       </details>
       <details>
         <summary>Who decides where the money goes?</summary>
@@ -174,8 +178,10 @@ require(tx.outputs.length == 3);</code></pre>
       </details>
       <details>
         <summary>What stops someone from draining the pool?</summary>
-        <p>Every send pays the pool {{ fee }} PUSD and can cost a lane at most {{ fmt(measured.maxSubsidySats) }} sats. Lanes are separate
-          coins, so one send touches one lane, and the operator can re-split or withdraw lanes at any time.</p>
+        <p>A send costs a lane its miner fee: {{ std.minerFeeSats }} sats for a standard send, {{ measured.maxMeasuredSubsidySats }} when the
+          lane also tops up a small coin's dust, and never more than {{ fmt(measured.maxSubsidySats) }} sats. Every send pays the pool exactly
+          {{ fee }} PUSD. The covenant bounds each send, not the total: many sends can still use lanes up, and a lane that runs low closes
+          (✕) until the operator refills it. Lanes are separate coins, so one send touches one lane.</p>
       </details>
       <details>
         <summary>Which wallets work?</summary>
@@ -185,8 +191,9 @@ require(tx.outputs.length == 3);</code></pre>
       <details>
         <summary>Is this really mainnet?</summary>
         <p>Only mainnet: the header shows the live block height, and every chain read uses a mainnet server.
-          <template v-if="board && lanesFunded === 0">The pool's lanes are not funded yet, so sends wait for the pool to open.</template>
-          <template v-else-if="board">{{ board.open }} of {{ lanesFunded }} lanes are open right now.</template></p>
+          <template v-if="poolUnfunded">The pool's lanes are not funded yet, so sends wait for the pool to open.</template>
+          <template v-else-if="board">{{ board.open }} of {{ lanesFunded }} lanes are open right now.</template>
+          <template v-else>The pool status is still loading.</template></p>
       </details>
     </section>
   </main>
@@ -194,19 +201,24 @@ require(tx.outputs.length == 3);</code></pre>
 
 <style scoped>
 .front { overflow-x: clip; }
-.wide { max-width: 1140px; margin: 0 auto; padding: 0 24px; }
-.hero { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr); gap: 52px; align-items: center; padding-top: 56px; padding-bottom: 48px; }
-.headline { font-size: clamp(40px, 4.9vw, 70px); line-height: 1; letter-spacing: 0; }
+.wide { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+.hero { display: grid; grid-template-columns: minmax(0, .84fr) minmax(0, 1.16fr); grid-template-areas: "h booth" "copy booth";
+  column-gap: 56px; row-gap: 22px; padding-top: 48px; padding-bottom: 48px; }
+.headline { grid-area: h; align-self: end; font-size: clamp(38px, 4.3vw, 60px); line-height: 1; letter-spacing: 0; }
 .headline .l1, .headline .l2 { display: block; animation: rise .6s var(--ease) both; }
 .headline .l2 { animation-delay: .12s; }
+.booth-slot { grid-area: booth; align-self: center; }
+.copy { grid-area: copy; align-self: start; }
 .plate-word { display: inline-block; white-space: nowrap; background: var(--sign); color: var(--sign-ink); padding: .06em .2em .02em; margin: .04em 0; border-radius: .12em;
   box-shadow: inset 0 0 0 .05em var(--sign), inset 0 0 0 .085em rgba(255, 255, 255, .92); }
-.sub { font-size: 20px; max-width: 34em; margin: 22px 0 26px; animation: rise .6s var(--ease) .22s both; }
+.plain { font-size: 23px; line-height: 1.35; font-weight: 600; margin: 0 0 10px; max-width: 26em; }
+.sub { font-size: 19px; max-width: 32em; margin: 0 0 24px; animation: rise .6s var(--ease) .22s both; }
 .sub strong.data { font-size: .95em; white-space: nowrap; }
 .ctas { display: flex; flex-wrap: wrap; gap: 12px; animation: rise .6s var(--ease) .32s both; }
 .ctas a.btn { display: inline-flex; align-items: center; text-decoration: none; padding: 0 28px; margin: 0; }
 .big { min-height: 58px; font-size: 22px; padding: 0 28px; }
-.status { font-size: 13px; color: var(--muted); margin: 16px 0 0; letter-spacing: .03em; }
+.status { font-size: 16px; line-height: 1.45; margin: 18px 0 0; padding-left: 14px; border-left: 4px solid var(--rule); max-width: 32em; }
+.status.closed { border-left-color: var(--before); }
 /* transform only: the headline and lede paint on the first frame (no opacity fade delaying the largest paint) */
 @keyframes rise { from { transform: translateY(12px); } to { transform: none; } }
 
@@ -214,7 +226,7 @@ require(tx.outputs.length == 3);</code></pre>
 .receipts .grid { display: grid; grid-template-columns: repeat(4, 1fr); }
 .receipt { padding: 28px 22px 24px; border-left: 2px dashed var(--rule); }
 .receipt:first-child { border-left: 0; padding-left: 0; }
-.fig { margin: 0; line-height: 1; }
+.fig { margin: 0; line-height: 1; white-space: nowrap; }
 .num { font-size: 56px; }
 .unit { font-size: 22px; color: var(--muted); }
 .lbl { margin: 10px 0 8px; font-size: 16px; line-height: 1.4; }
@@ -251,18 +263,18 @@ h2.display { font-size: clamp(32px, 4vw, 48px); }
 .ledger .k { color: var(--muted); }
 .ledger b { font-weight: 600; }
 .ledger .plus { color: var(--sign); }
-.code { margin: 6px 0 0; background: var(--housing); color: #E6E9EE; border-radius: 6px; padding: 12px 14px;
+.code { margin: 6px 0 0; background: var(--housing); color: var(--rule); border-radius: 6px; padding: 12px 14px;
   font: 400 13px/1.55 var(--font-data); white-space: pre-wrap; overflow-wrap: anywhere; }
 
-.honest { background: var(--housing); color: var(--paper); margin-top: 72px; padding: 56px 0 50px; }
+.honest { background: var(--housing); color: var(--rule); margin-top: 72px; padding: 56px 0 50px; }
 .honest h2 { color: var(--paper); }
 .honest a { color: var(--paper); }
-.honest a:hover { color: #FFFFFF; }
-.honest strong { color: #FFFFFF; }
+.honest a:hover { color: var(--sign-ink); }
+.honest strong { color: var(--sign-ink); }
 .honest ul { list-style: none; padding: 0; margin: 18px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0 40px; }
-.honest li { padding: 16px 0 16px 44px; border-bottom: 1px dotted #3A414B; position: relative; font-size: 17px; color: #D5DAE0; }
-.honest li::before { content: '✕'; position: absolute; left: 0; top: 14px; width: 28px; height: 28px; border-radius: 4px; background: #000; display: grid; place-items: center;
-  font: 800 17px/1 var(--font-display); color: var(--before); box-shadow: 0 0 0 1px #2A3039; }
+.honest li { padding: 16px 0 16px 44px; border-bottom: 1px dotted rgba(255, 255, 255, .16); position: relative; font-size: 17px; }
+.honest li::before { content: '✕'; position: absolute; left: 0; top: 14px; width: 28px; height: 28px; border-radius: 4px; display: grid; place-items: center;
+  font: 800 17px/1 var(--font-display); color: var(--before); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18); }
 
 .faq { padding-top: 64px; padding-bottom: 72px; max-width: 860px; }
 .faq h2 { margin-bottom: 14px; }
@@ -276,7 +288,7 @@ summary:hover { color: var(--sign); }
 details p { margin: 0 0 18px; max-width: 65ch; }
 
 @media (max-width: 960px) {
-  .hero { grid-template-columns: 1fr; gap: 36px; padding-top: 44px; }
+  .hero { grid-template-columns: 1fr; grid-template-areas: "h" "booth" "copy"; row-gap: 26px; padding-top: 40px; }
   .receipts .grid { grid-template-columns: 1fr 1fr; }
   .receipt:nth-child(3) { border-left: 0; padding-left: 0; }
   .receipt:nth-child(n+3) { border-top: 2px dashed var(--rule); }
@@ -286,9 +298,11 @@ details p { margin: 0 0 18px; max-width: 65ch; }
 }
 @media (max-width: 560px) {
   .wide { padding: 0 16px; }
-  .sub { font-size: 18px; }
+  .plain { font-size: 20px; }
+  .sub { font-size: 17px; }
   .big { font-size: 19px; padding: 0 20px; }
-  .num { font-size: 42px; }
+  .num { font-size: 40px; }
+  .unit { font-size: 18px; }
   .receipt { padding: 20px 12px 18px; }
   .tx { grid-template-columns: 1fr; padding: 18px; }
   .mid .display { transform: rotate(90deg); font-size: 34px; }

@@ -19,7 +19,7 @@ npm install
 npm test
 ```
 
-Expected: `Test Files 13 passed (13)`, `Tests 182 passed | 1 skipped (183)`; the skipped test checks the built bundle and runs after `npm run build`.
+Expected: `Test Files 13 passed (13)`, `Tests 183 passed | 1 skipped (184)`; the skipped test checks the built bundle and runs after `npm run build`.
 
 ## 2. Check the transaction shape
 

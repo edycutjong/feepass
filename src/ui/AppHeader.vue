@@ -21,7 +21,7 @@ defineEmits<{ connect: []; disconnect: [] }>();
       <a href="/deck/">Pitch deck</a>
       <a :href="repoUrl" target="_blank" rel="noopener">Repo</a>
       <a href="/pool">Pool</a>
-      <span class="addr data" title="CashTokens address (Ember votes / payout)">{{ payout }}</span>
+      <span class="addr" title="CashTokens address for BCH BLAZE Community Choice (EMBER2026 votes) and payout"><span class="addr-l">EMBER2026 votes →</span> <span class="data">{{ payout }}</span></span>
     </nav>
   </header>
 </template>
@@ -40,7 +40,10 @@ defineEmits<{ connect: []; disconnect: [] }>();
 .links { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; font-size: 15px; padding-bottom: 4px; }
 .links a { color: var(--sign-ink); min-height: 44px; display: inline-flex; align-items: center; }
 .links a:hover { text-decoration-thickness: 2px; opacity: .85; }
-.addr { font-size: 12px; opacity: .85; overflow-wrap: anywhere; }
+.addr { font-size: 12px; overflow-wrap: anywhere; }
+.addr-l { font: 600 12px/1 var(--font-body); color: var(--sign-dim); margin-right: 4px; }
+.addr .data { font-size: 12px; opacity: .9; }
+.connect { white-space: nowrap; }
 @media (max-width: 560px) { .hdr .wrap { padding: 0 16px; } }
-@media (max-width: 480px) { .addr { font-size: 10px; } .brand { font-size: 26px; } .mark { width: 32px; height: 32px; } .net { display: none; } .connect { margin-left: auto; } }
+@media (max-width: 480px) { .addr .data, .addr-l { font-size: 10px; } .connect { font-size: 15px; padding: 0 12px; } .brand { font-size: 26px; } .mark { width: 32px; height: 32px; } .net { display: none; } .connect { margin-left: auto; } }
 </style>
