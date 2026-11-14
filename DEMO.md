@@ -19,7 +19,7 @@ npm install
 npm test
 ```
 
-Expected: `Test Files 12 passed (12)`, `Tests 174 passed (174)`.
+Expected: `Test Files 12 passed (12)`, `Tests 173 passed | 1 skipped (174)`; the skipped test checks the built bundle and runs after `npm run build`.
 
 ## 2. Check the transaction shape
 
@@ -35,7 +35,7 @@ cat evidence/tx-shape.json
 | Fee the user pays | `params.feeTokens` | 1 base unit = 0.01 PUSD (2 decimals) |
 | Covenant size | `redeemScriptBytes` | 160 bytes |
 
-Recompute it: `npx tsx scripts/measure-shape.ts` (offline; compiles the covenant and serializes a signed send).
+The relay run in section 3 used the exact 572-sat fee; the 580 here adds 8 bytes of ECDSA headroom. Recompute it: `npx tsx scripts/measure-shape.ts` (offline; compiles the covenant and serializes a signed send).
 
 ## 3. Check the wallet protocol (real relay, mock coins)
 
@@ -48,7 +48,7 @@ A headless conforming wallet connects through the real WizardConnect relay, rece
 ## 4. Use it with a real wallet (needs the funded pool)
 
 1. Open <https://feepass.edycu.dev>, press **Connect wallet**, approve in a WizardConnect wallet.
-2. Press **Get 0.25 starter PUSD** if the wallet holds none.
+2. Press **Get 0.25 starter PUSD** if the wallet holds none (the starter faucet is not funded yet; check `/api/feepass?op=health`).
 3. Enter a mainnet recipient and an amount, press **Send**, approve one signature request.
 4. On the ticket, compare "spendable BCH before" and "after": the send does not touch them. Open the txid in the explorer (<https://bchexplorer.info/tx/>) and check inputs `in0` (yours) and `in1` (the lane), and that `out2` returns to the pool with exactly 0.01 PUSD more.
 

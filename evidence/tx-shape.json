@@ -1,5 +1,5 @@
 {
-  "measuredAt": "2026-11-14T14:26:15.719Z",
+  "measuredAt": "2026-11-14T17:41:41.899Z",
   "note": "Computed offline from the compiled artifact; sizes are exact serializations of the signed tx (Schnorr, sighash 0x61).",
   "params": {
     "feeTokens": 1,

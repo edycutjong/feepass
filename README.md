@@ -37,7 +37,7 @@ A new user holds dollars (PUSD, a CashToken on Bitcoin Cash) and **no BCH**. Eve
 
 ### The Solution
 
-A CashScript covenant, **the pool**, holds BCH in 20 UTXOs called lanes. A send spends the user's PUSD coin **and one lane** in the same transaction. The lane pays the miner fee. The covenant requires that exactly **0.01 PUSD** comes back to the pool, so the user pays the fee in dollars and the pool earns that revenue in PUSD. The user's wallet signs only its own input, over WizardConnect.
+A CashScript covenant, **the pool**, is designed to hold BCH in 20 UTXOs called lanes (the target; none is funded on mainnet yet). A send spends the user's PUSD coin **and one lane** in the same transaction. The lane pays the miner fee. The covenant requires that exactly **0.01 PUSD** comes back to the pool, so the user pays the fee in dollars and the pool earns that revenue in PUSD. The user's wallet signs only its own input, over WizardConnect.
 
 What it does and does not promise:
 
@@ -90,7 +90,7 @@ Wallet compatibility is **unverified** for any named wallet until a human record
 
 | Metric | Value | Reproduce |
 |---|---|---|
-| Tests | **174 passing** in 12 files (vitest, offline) | `npm test` |
+| Tests | **174 tests in 12 files** (vitest, offline; 173 run on a fresh clone, 1 checks the built bundle and runs after `npm run build`) | `npm test` |
 | Type check | `vue-tsc --noEmit`, 0 errors | `npm run typecheck` |
 | Mainnet guard | every provider in browser code is `'mainnet'`, asserted by a test | `test/mainnet-only.test.ts` |
 | Pre-broadcast check | the signed transaction is verified on the BCH 2026 VM before it is sent | `verifySignedTx` in `src/core/` |
@@ -116,14 +116,14 @@ Node 22 or newer. No wallet, key or network setup is needed to run the tests.
 ```bash
 git clone https://github.com/edycutjong/feepass && cd feepass
 npm install
-npm test        # 174 tests, offline
+npm test        # 174 tests (173 run before the first build), offline
 npm run dev     # the app, reading Bitcoin Cash mainnet
 ```
 
 ### Try it with your own wallet (about 60 seconds)
 
 1. Open <https://feepass.edycu.dev> and press **Connect wallet**; approve in a WizardConnect wallet.
-2. No PUSD yet? Press **Get 0.25 starter PUSD** (one claim per address, 3 per UTC day).
+2. No PUSD yet? Press **Get 0.25 starter PUSD** (one claim per address, 3 per UTC day; the starter faucet is not funded yet, check `/api/feepass?op=health`).
 3. Enter a mainnet recipient and an amount, then **Send**. Approve the single signature request.
 4. The ticket shows what was sent, the fee you paid in PUSD, the lane that paid the miner fee, and your spendable BCH before and after.
 
@@ -135,7 +135,7 @@ npm run typecheck   # vue-tsc
 npm run build       # bundles the API, type-checks, builds the static app
 ```
 
-The workflow in `.github/workflows/ci.yml` runs the same commands on every push.
+`.github/workflows/ci.yml` runs on pushes to `main` and on pull requests: `npm ci`, a check that the compiled covenant artifact is up to date, `npm run typecheck`, `npm test` and `npx vite build`. (GitHub Actions is currently blocked by an account billing issue, so there is no CI badge.)
 
 ## 📁 Project Structure
 
