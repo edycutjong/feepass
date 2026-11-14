@@ -20456,15 +20456,36 @@ var IpLimiter = class {
       return false;
     }
     recent.push(nowMs);
+    this.hits.delete(ip);
     this.hits.set(ip, recent);
-    if (this.hits.size > 5e3) this.hits.clear();
+    for (const k of this.hits.keys()) {
+      if (this.hits.size <= 5e3) break;
+      this.hits.delete(k);
+    }
     return true;
   }
 };
 var healthCache = null;
+var healthInFlight = null;
 var HEALTH_TTL_MS = 3e4;
+var claimQueue = Promise.resolve();
 function clientIp(req) {
-  return (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+  return (req.headers.get("x-real-ip") ?? "").trim() || (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+}
+async function readHealth(deps2) {
+  const [coins, hist, board] = await Promise.allSettled([readFaucetCoins(deps2.chain, deps2.starter), readClaimHistory(deps2.chain, deps2.starter), deps2.board()]);
+  const faucetUnits = coins.status === "fulfilled" ? Number(coins.value.units) : null;
+  const body = {
+    ok: coins.status === "fulfilled" && board.status === "fulfilled" && board.value !== null,
+    faucetUnits,
+    faucetBchSats: coins.status === "fulfilled" ? Number(coins.value.bch.reduce((s, u) => s + u.satoshis, 0n)) : null,
+    claimUnits: Number(deps2.starter.claimUnits),
+    claimsToday: hist.status === "fulfilled" ? hist.value.claimsToday : null,
+    dailyCap: deps2.starter.dailyCap,
+    lanesOpen: board.status === "fulfilled" && board.value ? board.value.open : null,
+    historyTruncated: hist.status === "fulfilled" ? hist.value.historyTruncated : null
+  };
+  return { body, cacheable: body.ok && hist.status === "fulfilled" };
 }
 async function handle(req, deps2, limiter2) {
   const url = new URL(req.url);
@@ -20473,19 +20494,16 @@ async function handle(req, deps2, limiter2) {
   if (op === "health") {
     if (req.method !== "GET") return json(405, { error: "Use GET." });
     if (healthCache && nowMs - healthCache.at < HEALTH_TTL_MS && healthCache.key === deps2.starter.faucetAddress) return json(200, healthCache.body);
-    const [coins, hist, board] = await Promise.allSettled([readFaucetCoins(deps2.chain, deps2.starter), readClaimHistory(deps2.chain, deps2.starter), deps2.board()]);
-    const faucetUnits = coins.status === "fulfilled" ? Number(coins.value.units) : null;
-    const body = {
-      ok: coins.status === "fulfilled" && board.status === "fulfilled" && board.value !== null,
-      faucetUnits,
-      faucetBchSats: coins.status === "fulfilled" ? Number(coins.value.bch.reduce((s, u) => s + u.satoshis, 0n)) : null,
-      claimUnits: Number(deps2.starter.claimUnits),
-      claimsToday: hist.status === "fulfilled" ? hist.value.claimsToday : null,
-      dailyCap: deps2.starter.dailyCap,
-      lanesOpen: board.status === "fulfilled" && board.value ? board.value.open : null,
-      historyTruncated: hist.status === "fulfilled" ? hist.value.historyTruncated : null
-    };
-    if (body.ok && hist.status === "fulfilled") healthCache = { at: nowMs, key: deps2.starter.faucetAddress, body };
+    const key = deps2.starter.faucetAddress;
+    if (!healthInFlight || healthInFlight.key !== key) {
+      const mine = { key, p: readHealth(deps2) };
+      healthInFlight = mine;
+      void mine.p.finally(() => {
+        if (healthInFlight === mine) healthInFlight = null;
+      }).catch(() => void 0);
+    }
+    const { body, cacheable } = await healthInFlight.p;
+    if (cacheable) healthCache = { at: nowMs, key: deps2.starter.faucetAddress, body };
     return json(200, body);
   }
   if (op === "starter") {
@@ -20501,7 +20519,9 @@ async function handle(req, deps2, limiter2) {
     if (typeof address !== "string") return json(400, { error: 'Send JSON: {"address": "bitcoincash:\u2026"}' });
     if (!limiter2.allow(clientIp(req), nowMs)) return json(429, { error: "Too many claims from this network just now. Try again later.", code: "IP_LIMIT" });
     try {
-      const r = await claimStarter(deps2.chain, deps2.starter, address);
+      const run = claimQueue.then(() => claimStarter(deps2.chain, deps2.starter, address));
+      claimQueue = run.catch(() => void 0);
+      const r = await run;
       return json(200, { txid: r.txid, units: Number(r.units), claimsToday: r.claimsToday, dailyCap: deps2.starter.dailyCap });
     } catch (e) {
       if (e instanceof StarterError) return json(HTTP[e.code], { error: e.message, code: e.code });

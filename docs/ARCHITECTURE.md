@@ -109,7 +109,7 @@ A judge whose wallet holds no PUSD cannot make the required mainnet send, so one
 (`api/feepass.mjs`, source `src/server/`) offers:
 
 - `POST /api/feepass?op=starter` `{address}` → a 0.25 PUSD claim from a faucet key (`FAUCET_WIF`, a Vercel env var, never in the repo).
-- `GET /api/feepass?op=health` → faucet PUSD and BCH, claims today, open lanes, whether the history read was truncated (answer cached 30 s per instance).
+- `GET /api/feepass?op=health` → faucet PUSD and BCH, claims today, open lanes, whether the history read was truncated (answer cached 30 s per instance; concurrent misses share one read).
 
 Guarantees are stated at their real strength. **One claim per receiving address and 3 claims per UTC day**, both read from the
 faucet address's own on-chain history (a claim is a tx that spends a faucet coin and pays a token output to another address, so
@@ -122,7 +122,8 @@ route reports `historyTruncated`. There is no database, so the chain serializes 
 spends the faucet's largest covering PUSD coin and its largest BCH coin (deterministic, ties by outpoint), so two claims built
 from the same history read conflict and only one is accepted; the loser re-reads the history (mempool included) and re-checks
 both limits before it rebuilds. Each attempt reads the coins first and the history second, so a claim that is already in the
-coin read is also in the (later) history read from the same server (`test/starter.test.ts`, the three "race" cases). A per-IP limit (3 per hour) lives in memory and is best effort. The hard
+coin read is also in the (later) history read from the same server (`test/starter.test.ts`, the "race" cases). Inside one function instance, claims also run one at a time. A per-IP limit (3 per hour, keyed on
+`x-real-ip`, which Vercel sets) lives in memory and is best effort: instances do not share it. The hard
 budget is what the faucet holds. The starter output carries at least twice the token dust, asserted before every broadcast,
 so the first send needs no top-up.
 

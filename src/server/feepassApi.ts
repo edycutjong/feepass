@@ -26,19 +26,45 @@ export class IpLimiter {
     const recent = (this.hits.get(ip) ?? []).filter((t) => nowMs - t < this.windowMs);
     if (recent.length >= this.max) { this.hits.set(ip, recent); return false; }
     recent.push(nowMs);
-    this.hits.set(ip, recent);
-    if (this.hits.size > 5000) this.hits.clear(); // bounded memory
+    this.hits.delete(ip);
+    this.hits.set(ip, recent); // re-inserted: Map order = least recently seen first
+    // bounded memory: evict the least recently seen keys, never everyone's window at once
+    for (const k of this.hits.keys()) { if (this.hits.size <= 5000) break; this.hits.delete(k); }
     return true;
   }
 }
 
 let healthCache: { at: number; key: string; body: unknown } | null = null;
+/** Concurrent misses share one read: the history scan is one raw-tx fetch per faucet history entry. */
+let healthInFlight: { key: string; p: Promise<{ body: unknown; cacheable: boolean }> } | null = null;
 const HEALTH_TTL_MS = 30_000;
 /** Test hook: forget the cached health answer. */
-export const resetHealthCache = () => { healthCache = null; };
+export const resetHealthCache = () => { healthCache = null; healthInFlight = null; };
 
+/** Claims in one instance run one at a time, so the second sees the first in the chain before it is built. Across
+ *  instances the chain itself serializes them (starter.ts header). */
+let claimQueue: Promise<unknown> = Promise.resolve();
+
+/** Vercel sets x-real-ip (and overwrites x-forwarded-for) with the connecting client's address; the leftmost
+ *  x-forwarded-for entry is the fallback. Either way the limit is best effort and documented as such. */
 export function clientIp(req: Request): string {
-  return (req.headers.get('x-forwarded-for') ?? '').split(',')[0]!.trim() || 'unknown';
+  return (req.headers.get('x-real-ip') ?? '').trim() || (req.headers.get('x-forwarded-for') ?? '').split(',')[0]!.trim() || 'unknown';
+}
+
+async function readHealth(deps: ApiDeps): Promise<{ body: unknown; cacheable: boolean }> {
+  const [coins, hist, board] = await Promise.allSettled([readFaucetCoins(deps.chain, deps.starter), readClaimHistory(deps.chain, deps.starter), deps.board()]);
+  const faucetUnits = coins.status === 'fulfilled' ? Number(coins.value.units) : null;
+  const body = {
+    ok: coins.status === 'fulfilled' && board.status === 'fulfilled' && board.value !== null,
+    faucetUnits,
+    faucetBchSats: coins.status === 'fulfilled' ? Number(coins.value.bch.reduce((s, u) => s + u.satoshis, 0n)) : null,
+    claimUnits: Number(deps.starter.claimUnits),
+    claimsToday: hist.status === 'fulfilled' ? hist.value.claimsToday : null,
+    dailyCap: deps.starter.dailyCap,
+    lanesOpen: board.status === 'fulfilled' && board.value ? board.value.open : null,
+    historyTruncated: hist.status === 'fulfilled' ? hist.value.historyTruncated : null,
+  };
+  return { body, cacheable: body.ok && hist.status === 'fulfilled' }; // a partial failure is never cached
 }
 
 export async function handle(req: Request, deps: ApiDeps, limiter: IpLimiter): Promise<Response> {
@@ -50,19 +76,14 @@ export async function handle(req: Request, deps: ApiDeps, limiter: IpLimiter): P
     if (req.method !== 'GET') return json(405, { error: 'Use GET.' });
     // Unauthenticated and the history read is heavy (one raw tx per faucet history entry): cached for 30 s per instance.
     if (healthCache && nowMs - healthCache.at < HEALTH_TTL_MS && healthCache.key === deps.starter.faucetAddress) return json(200, healthCache.body);
-    const [coins, hist, board] = await Promise.allSettled([readFaucetCoins(deps.chain, deps.starter), readClaimHistory(deps.chain, deps.starter), deps.board()]);
-    const faucetUnits = coins.status === 'fulfilled' ? Number(coins.value.units) : null;
-    const body = {
-      ok: coins.status === 'fulfilled' && board.status === 'fulfilled' && board.value !== null,
-      faucetUnits,
-      faucetBchSats: coins.status === 'fulfilled' ? Number(coins.value.bch.reduce((s, u) => s + u.satoshis, 0n)) : null,
-      claimUnits: Number(deps.starter.claimUnits),
-      claimsToday: hist.status === 'fulfilled' ? hist.value.claimsToday : null,
-      dailyCap: deps.starter.dailyCap,
-      lanesOpen: board.status === 'fulfilled' && board.value ? board.value.open : null,
-      historyTruncated: hist.status === 'fulfilled' ? hist.value.historyTruncated : null,
-    };
-    if (body.ok && hist.status === 'fulfilled') healthCache = { at: nowMs, key: deps.starter.faucetAddress, body }; // a partial failure is never cached
+    const key = deps.starter.faucetAddress;
+    if (!healthInFlight || healthInFlight.key !== key) {
+      const mine: { key: string; p: Promise<{ body: unknown; cacheable: boolean }> } = { key, p: readHealth(deps) };
+      healthInFlight = mine;
+      void mine.p.finally(() => { if (healthInFlight === mine) healthInFlight = null; }).catch(() => undefined);
+    }
+    const { body, cacheable } = await healthInFlight.p;
+    if (cacheable) healthCache = { at: nowMs, key: deps.starter.faucetAddress, body };
     return json(200, body);
   }
 
@@ -75,7 +96,9 @@ export async function handle(req: Request, deps: ApiDeps, limiter: IpLimiter): P
     if (typeof address !== 'string') return json(400, { error: 'Send JSON: {"address": "bitcoincash:…"}' });
     if (!limiter.allow(clientIp(req), nowMs)) return json(429, { error: 'Too many claims from this network just now. Try again later.', code: 'IP_LIMIT' });
     try {
-      const r = await claimStarter(deps.chain, deps.starter, address);
+      const run = claimQueue.then(() => claimStarter(deps.chain, deps.starter, address));
+      claimQueue = run.catch(() => undefined);
+      const r = await run;
       return json(200, { txid: r.txid, units: Number(r.units), claimsToday: r.claimsToday, dailyCap: deps.starter.dailyCap });
     } catch (e) {
       if (e instanceof StarterError) return json(HTTP[e.code], { error: e.message, code: e.code });

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { MockNetworkProvider, randomUtxo } from 'cashscript';
 import { FundedMock } from './helpers';
 import { hash160, secp256k1, sha256, utf8ToBin, encodeCashAddress } from '@bitauth/libauth';
-import { handle, IpLimiter, resetHealthCache, type ApiDeps } from '../src/server/feepassApi';
+import { clientIp, handle, IpLimiter, resetHealthCache, type ApiDeps } from '../src/server/feepassApi';
 import { STARTER_DEFAULTS, type FaucetChain } from '../src/core/starter';
 import { PUSD_CATEGORY_DISPLAY as CAT } from '../src/core/params';
 
@@ -55,6 +55,35 @@ describe('api/feepass', () => {
     expect(await (await get()).json()).toEqual(first); // still cached
     t += 31_000;
     expect(((await (await get()).json()) as any).faucetUnits).toBe(800);
+  });
+  it('concurrent health misses share one history read (no fan-out per request)', async () => {
+    const { deps, chain } = rig();
+    let reads = 0;
+    const h0 = chain.history.bind(chain);
+    chain.history = async () => { reads++; return h0(); };
+    const get = () => handle(new Request('https://x.test/api/feepass?op=health'), deps, new IpLimiter());
+    const [a, b, c] = await Promise.all([get(), get(), get()]);
+    expect([a.status, b.status, c.status]).toEqual([200, 200, 200]);
+    expect(reads).toBe(2); // one readClaimHistory = the q... and z... spellings of one address, not 2 x 3
+  });
+  it('two claims for the same address at once in one instance: one 200, one 409 (claims run one at a time)', async () => {
+    const { deps, chain } = rig();
+    const lim = new IpLimiter();
+    const [a, b] = await Promise.all([handle(post({ address: judge }, '1.1.1.1'), deps, lim), handle(post({ address: judge }, '2.2.2.2'), deps, lim)]);
+    expect([a.status, b.status].sort()).toEqual([200, 409]);
+    expect(chain.sent).toHaveLength(1);
+  });
+  it('limiter overflow evicts the least recently seen IPs, not every window; x-real-ip is preferred', () => {
+    const lim = new IpLimiter(3, 3_600_000);
+    for (let i = 0; i < 3; i++) expect(lim.allow('9.9.9.9', 1)).toBe(true);
+    for (let i = 0; i < 5001; i++) lim.allow('10.0.' + i, 2);
+    expect(lim.allow('9.9.9.9', 3)).toBe(true); // the oldest key was evicted (bounded memory)
+    for (let i = 0; i < 2; i++) lim.allow('9.9.9.9', 4);
+    for (let i = 0; i < 10; i++) lim.allow('11.0.' + i, 5);
+    expect(lim.allow('9.9.9.9', 6)).toBe(false); // a recent key at its limit survives later inserts
+    const req = new Request('https://x.test/', { headers: { 'x-real-ip': '7.7.7.7', 'x-forwarded-for': '6.6.6.6, 5.5.5.5' } });
+    expect(clientIp(req)).toBe('7.7.7.7');
+    expect(clientIp(new Request('https://x.test/', { headers: { 'x-forwarded-for': '6.6.6.6, 5.5.5.5' } }))).toBe('6.6.6.6');
   });
   it('a claim returns the txid; a repeat for the same address is 409; the body names the reason', async () => {
     const { deps } = rig();

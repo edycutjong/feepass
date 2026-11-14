@@ -1,11 +1,11 @@
 // Splits the hot wallet into N pool lanes in ONE tx: N outputs of S sats + 1 PUSD unit each (R7 seed) to the covenant's
 // token address, a PUSD change output and a BCH change output back to the hot wallet. Sum of PUSD out = sum in (no burn).
 // Usage: tsx scripts/split.ts --network mock|chipnet|mainnet --lanes N --sats S [--category <display hex>]
-//        [--authorized-cap <bch>] [--gate]   (--gate writes lane 0 into src/config/gate.json for the wallet check)
+//        [--bch-usd <price> (required on mainnet)] [--authorized-cap <bch>] [--gate]   (--gate writes lane 0 into src/config/gate.json for the wallet check)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { MockNetworkProvider, SignatureTemplate, TransactionBuilder, randomUtxo } from 'cashscript';
 import { poolContract } from '../src/core/pool';
-import { DEFAULT_PARAMS, LANE_SEED_UNITS, PUSD_CATEGORY_DISPLAY } from '../src/core/params';
+import { DEFAULT_PARAMS, LANE_SEED_UNITS, PUSD_CATEGORY_DISPLAY, feeCoversSubsidy } from '../src/core/params';
 import { appendEvidence, arg, hotWallet, network, provider as makeProvider, requireCap } from './lib';
 
 const net = network();
@@ -14,6 +14,12 @@ const sats = BigInt(arg('sats') ?? '100000');
 const category = arg('category') ?? PUSD_CATEGORY_DISPLAY;
 if (!Number.isInteger(lanes) || lanes < 1 || lanes > 50) throw new Error('--lanes 1..50');
 if (sats < 10_000n) throw new Error('--sats must be at least 10,000');
+// Funding lanes is when BCH is put at risk, possibly days after deploy: re-check the economics at today's price.
+if (net === 'mainnet') {
+  const bchUsd = Number(arg('bch-usd'));
+  if (!(bchUsd > 0)) throw new Error('--bch-usd <price> is required on mainnet (feeTokens must be worth >= 1.5 x maxSubsidy)');
+  if (!feeCoversSubsidy(DEFAULT_PARAMS, bchUsd)) throw new Error('feeTokens no longer covers 1.5 x maxSubsidy at BCH $' + bchUsd + ': do not fund lanes');
+}
 
 const provider = makeProvider(net);
 const hot = hotWallet(net);
