@@ -90,7 +90,7 @@ Wallet compatibility is **unverified** for any named wallet until a human record
 
 | Metric | Value | Reproduce |
 |---|---|---|
-| Tests | **174 tests in 12 files** (vitest, offline; 173 run on a fresh clone, 1 checks the built bundle and runs after `npm run build`) | `npm test` |
+| Tests | **183 tests in 13 files** (vitest, offline; 182 run on a fresh clone, 1 checks the built bundle and runs after `npm run build`) | `npm test` |
 | Type check | `vue-tsc --noEmit`, 0 errors | `npm run typecheck` |
 | Mainnet guard | every provider in browser code is `'mainnet'`, asserted by a test | `test/mainnet-only.test.ts` |
 | Pre-broadcast check | the signed transaction is verified on the BCH 2026 VM before it is sent | `verifySignedTx` in `src/core/` |
@@ -116,7 +116,7 @@ Node 22 or newer. No wallet, key or network setup is needed to run the tests.
 ```bash
 git clone https://github.com/edycutjong/feepass && cd feepass
 npm install
-npm test        # 174 tests (173 run before the first build), offline
+npm test        # 183 tests (182 run before the first build), offline
 npm run dev     # the app, reading Bitcoin Cash mainnet
 ```
 
@@ -142,12 +142,13 @@ npm run build       # bundles the API, type-checks, builds the static app
 ```
 contracts/FeePassPool.cash   the covenant
 src/core/                    pure TypeScript: builder, send flow, lanes, config, starter
-src/ui/                      the Vue app (send form, lane board, ticket)
+src/ui/                      the Vue app (front page, send form, lane board, ticket)
 src/server/ + api/           the one serverless route (starter PUSD, pool health)
 scripts/                     operator tools: deploy, split into lanes, sweep, spike, measure
 evidence/                    offline measurements (mainnet txids appear here later)
+public/deck/                 the pitch deck (one HTML file, served at /deck/)
 docs/                        ARCHITECTURE.md, DX-REPORT.md, assets/
-test/                        12 test files
+test/                        13 test files
 ```
 
 ## 💰 Business Model
@@ -156,7 +157,7 @@ Wallets and merchants that onboard new users in PUSD want those users to transac
 
 ## 📽️ Demo Materials
 
-Live app: <https://feepass.edycu.dev> · How to reproduce every number: [DEMO.md](DEMO.md).
+Live app: <https://feepass.edycu.dev> · Pitch deck: <https://feepass.edycu.dev/deck/> (arrow keys, N for notes) · How to reproduce every number: [DEMO.md](DEMO.md).
 
 ## 📄 License
 
