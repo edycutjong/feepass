@@ -24,6 +24,8 @@ main a, .panel a { display: inline-block; padding: 10px 0; margin: -10px 0; } /*
 .data { font-family: var(--font-data); font-size: 16px; }
 .muted { color: var(--muted); }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+/* on the sign plates and the night band the ink ring disappears: use retroreflective white */
+.hdr :focus-visible, .ftr :focus-visible, .honest :focus-visible { outline-color: var(--sign-ink); }
 
 .btn { font: 800 18px/1 var(--font-display); text-transform: uppercase; letter-spacing: .04em; min-height: 48px; padding: 0 22px;
   border-radius: 6px; border: 2px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer;
