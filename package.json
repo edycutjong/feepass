@@ -19,6 +19,9 @@
   },
   "dependencies": {
     "@bitauth/libauth": "^3.1.0-next.8",
+    "@fontsource/encode-sans-condensed": "^5.3.0",
+    "@fontsource/public-sans": "^5.3.0",
+    "@fontsource/sometype-mono": "^5.3.0",
     "@paytaca/wizardconnect-vue": "^0.2.2",
     "@wizardconnect/core": "^0.2.10",
     "@wizardconnect/dapp": "^0.2.7",
@@ -28,8 +31,10 @@
   "devDependencies": {
     "@types/node": "^26.6.6",
     "@vitejs/plugin-vue": "^6.0.11",
+    "@vue/test-utils": "^2.5.1",
     "@wizardconnect/wallet": "^0.2.4",
     "cashc": "^0.14.0",
+    "happy-dom": "^21.0.4",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vite": "^8.3.8",
