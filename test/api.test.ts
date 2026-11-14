@@ -1,8 +1,8 @@
 // The serverless function's routing, validation and error mapping, offline.
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { MockNetworkProvider, randomUtxo } from 'cashscript';
 import { hash160, secp256k1, sha256, utf8ToBin, encodeCashAddress } from '@bitauth/libauth';
-import { handle, IpLimiter, type ApiDeps } from '../src/server/feepassApi';
+import { handle, IpLimiter, resetHealthCache, type ApiDeps } from '../src/server/feepassApi';
 import { STARTER_DEFAULTS, type FaucetChain } from '../src/core/starter';
 import { PUSD_CATEGORY_DISPLAY as CAT } from '../src/core/params';
 
@@ -37,11 +37,23 @@ const post = (body: unknown, ip = '1.1.1.1') =>
 const judge = key('judge').tokenAddress;
 
 describe('api/feepass', () => {
+  beforeEach(() => resetHealthCache());
   it('health reports faucet units, BCH, claims today and open lanes', async () => {
     const { deps } = rig();
     const r = await handle(new Request('https://x.test/api/feepass?op=health'), deps, new IpLimiter());
     expect(r.status).toBe(200);
     expect(await r.json()).toMatchObject({ ok: true, faucetUnits: 300, faucetBchSats: 50_000, claimUnits: 25, claimsToday: 0, dailyCap: 3, lanesOpen: 7 });
+  });
+  it('health is cached for 30 s (an unauthenticated route must not re-read the faucet history on every GET)', async () => {
+    const { deps, chain } = rig();
+    let t = 1_000_000;
+    deps.now = () => t;
+    const get = () => handle(new Request('https://x.test/api/feepass?op=health'), deps, new IpLimiter());
+    const first = await (await get()).json();
+    chain.addUtxo(deps.starter.faucetTokenAddress, randomUtxo({ satoshis: 2000n, token: { category: CAT, amount: 500n } }));
+    expect(await (await get()).json()).toEqual(first); // still cached
+    t += 31_000;
+    expect(((await (await get()).json()) as any).faucetUnits).toBe(800);
   });
   it('a claim returns the txid; a repeat for the same address is 409; the body names the reason', async () => {
     const { deps } = rig();

@@ -53,13 +53,21 @@ function deps(): ApiDeps {
   };
 }
 
+const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-store' };
+
 export default {
   async fetch(request: Request): Promise<Response> {
+    let d: ApiDeps;
     try {
-      return await handle(request, deps(), limiter);
+      d = deps();
     } catch {
-      // never echo internals (the message could name the key file or env)
-      return new Response(JSON.stringify({ error: 'The faucet is not configured.', code: 'UNCONFIGURED' }), { status: 503, headers: { 'content-type': 'application/json' } });
+      // missing or invalid FAUCET_WIF: never echo the reason (it could name the env var's contents)
+      return new Response(JSON.stringify({ error: 'The faucet is not configured.', code: 'UNCONFIGURED' }), { status: 503, headers: JSON_HEADERS });
+    }
+    try {
+      return await handle(request, d, limiter);
+    } catch {
+      return new Response(JSON.stringify({ error: 'Unexpected error. Try again.', code: 'INTERNAL' }), { status: 500, headers: JSON_HEADERS });
     }
   },
 };

@@ -175,7 +175,7 @@ export function buildClaim(coins: FaucetCoins, picked: SpendableUtxo[], recipien
     if (bchChange >= 546n) b.addOutput({ to: c.faucetAddress, amount: bchChange });
     return b;
   };
-  let fee = 1000n;
+  let fee = 0n; // the size loop below converges; a faucet is refused only when the FINAL fee does not fit
   for (let k = 0; k < 3; k++) fee = BigInt(build(fee).getTransactionSize()) * BigInt(c.feeRate ?? 1) + 2n;
   const tx = build(fee);
   const hex = tx.build();
@@ -221,5 +221,6 @@ export async function claimStarter(chain: FaucetChain, c: StarterConfig, address
       if (!CONFLICT.test(String((e as Error).message ?? e))) throw new StarterError('CHAIN', 'The network did not accept the claim. Try again in a minute.');
     }
   }
-  throw new StarterError('BUSY', `Another claim was in flight. Try again in a moment. (${String((lastErr as Error)?.message ?? lastErr).slice(0, 80)})`);
+  void lastErr; // the raw node error is never echoed to the client
+  throw new StarterError('BUSY', 'Another claim was in flight. Try again in a moment.');
 }

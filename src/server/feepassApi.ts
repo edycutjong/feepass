@@ -32,6 +32,11 @@ export class IpLimiter {
   }
 }
 
+let healthCache: { at: number; key: string; body: unknown } | null = null;
+const HEALTH_TTL_MS = 30_000;
+/** Test hook: forget the cached health answer. */
+export const resetHealthCache = () => { healthCache = null; };
+
 export function clientIp(req: Request): string {
   return (req.headers.get('x-forwarded-for') ?? '').split(',')[0]!.trim() || 'unknown';
 }
@@ -43,9 +48,11 @@ export async function handle(req: Request, deps: ApiDeps, limiter: IpLimiter): P
 
   if (op === 'health') {
     if (req.method !== 'GET') return json(405, { error: 'Use GET.' });
+    // Unauthenticated and the history read is heavy (one raw tx per faucet history entry): cached for 30 s per instance.
+    if (healthCache && nowMs - healthCache.at < HEALTH_TTL_MS && healthCache.key === deps.starter.faucetAddress) return json(200, healthCache.body);
     const [coins, hist, board] = await Promise.allSettled([readFaucetCoins(deps.chain, deps.starter), readClaimHistory(deps.chain, deps.starter), deps.board()]);
     const faucetUnits = coins.status === 'fulfilled' ? Number(coins.value.units) : null;
-    return json(200, {
+    const body = {
       ok: coins.status === 'fulfilled' && board.status === 'fulfilled' && board.value !== null,
       faucetUnits,
       faucetBchSats: coins.status === 'fulfilled' ? Number(coins.value.bch.reduce((s, u) => s + u.satoshis, 0n)) : null,
@@ -53,7 +60,10 @@ export async function handle(req: Request, deps: ApiDeps, limiter: IpLimiter): P
       claimsToday: hist.status === 'fulfilled' ? hist.value.claimsToday : null,
       dailyCap: deps.starter.dailyCap,
       lanesOpen: board.status === 'fulfilled' && board.value ? board.value.open : null,
-    });
+      historyTruncated: hist.status === 'fulfilled' ? hist.value.historyTruncated : null,
+    };
+    healthCache = { at: nowMs, key: deps.starter.faucetAddress, body };
+    return json(200, body);
   }
 
   if (op === 'starter') {

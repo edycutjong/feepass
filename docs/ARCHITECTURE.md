@@ -1,6 +1,11 @@
 # FeePass architecture
 
 FeePass lets a wallet that holds PUSD (ParyonUSD, a CashToken on Bitcoin Cash) but **no spendable BCH** send PUSD on mainnet.
+> **Status (update this line when it changes):** the covenant, builder, flow, app and starter route are built and tested
+> (`npm test`) and the app is live; the **mainnet pool is not deployed yet**, so there is no pool address or mainnet txid in this
+> repo. `evidence/` holds offline measurements only; `evidence/mainnet-txs.csv` appears when the operator tools first run on
+> mainnet. Wallet compatibility (does a given wallet sign this request) is unverified until a human records it via `/gate.html`.
+
 A CashScript covenant ("the pool") pays the miner fee in sats; the sender pays for it in dollars: exactly `f` = 1 base unit
 (0.01 PUSD) of PUSD goes to the pool. This file is written for a reader who will answer questions about the repo (human or
 AI): every claim names the file that proves it.
@@ -29,8 +34,17 @@ Nothing else is a valid spend of a lane except the operator's `withdraw(ownerSig
 | R5 | `out2.tokenAmount == in1.tokenAmount + f` (equality) | undercharging, and overcharging through any front end |
 | R6 | `out0.value + out1.value <= in0.value + T` (T = 675 sats) | the lane funding more than one token dust of extras |
 
-`sponsorPaid` takes no arguments: there is nothing to forge. The user's wallet signs only its own input; the wallet shows the
-three outputs before signing. Constructor parameters (`ownerPk`, PUSD category, f, C, T) are in `src/config/mainnet.json`;
+`sponsorPaid` takes no arguments: there is nothing to forge. The user's wallet signs only its own input; a wallet that itemizes
+outputs will list the three before signing (unverified for any named wallet until the `/gate.html` check is recorded).
+
+### What the covenant does NOT check
+
+The pool constrains only what the pool pays and receives. It does **not** check: who `out0` pays or how much PUSD it carries
+(only that it is PUSD), where `out1` (the change) goes, or the miner-fee level (it bounds only the lane's loss via R4 and the
+extras via R6). Those outputs are bound by the user's own `SIGHASH_ALL|FORKID|UTXOS` signature on input 0, which commits to every
+output. The pool does not "bind the recipient"; the user's signature does, and the app re-verifies the returned transaction
+before broadcasting. A misbehaving front end can build a different send, but it cannot make the user sign it unseen and it
+cannot make the pool pay more than `C` or receive less than `f`. Constructor parameters (`ownerPk`, PUSD category, f, C, T) are in `src/config/mainnet.json`;
 the pool address is derived from them in `src/core/pool.ts`, never typed.
 
 Measured shape: 572 bytes, 580 sats miner fee at the standard 1 sat/B plus 8 bytes ECDSA headroom (`evidence/tx-shape.json`).
@@ -78,7 +92,7 @@ evidence/                       measured JSON/CSV the docs and the UI quote
 
 WizardConnect's handshake carries no network, and the app derives the wallet's addresses itself, so an address prefix proves
 nothing. The guard is: the app's provider is `ElectrumNetworkProvider('mainnet')` with no switch; `parseConfig` throws for any
-other network; recipients must be mainnet P2PKH; CashScript itself refuses a wrong-network output prefix; and a wallet whose
+other network; recipients must be mainnet P2PKH (`parseRecipient` refuses test-network and script addresses); and a wallet whose
 coins are not on mainnet simply shows "No PUSD found on mainnet" (never a network diagnosis). `test/mainnet-only.test.ts`
 asserts every provider in browser code is `'mainnet'`.
 
@@ -88,11 +102,11 @@ A judge whose wallet holds no PUSD cannot make the required mainnet send, so one
 (`api/feepass.mjs`, source `src/server/`) offers:
 
 - `POST /api/feepass?op=starter` `{address}` → a 0.25 PUSD claim from a faucet key (`FAUCET_WIF`, a Vercel env var, never in the repo).
-- `GET /api/feepass?op=health` → faucet PUSD and BCH, claims today, open lanes.
+- `GET /api/feepass?op=health` → faucet PUSD and BCH, claims today, open lanes, whether the history read was truncated (answer cached 30 s per instance).
 
 Guarantees are stated at their real strength. **One claim per receiving address and 3 claims per UTC day**, both read from the
-faucet address's own on-chain history (a claim is a tx that spends a faucet coin; a judge returning PUSD to the faucet is not a
-claim). There is no database. The history read is not atomic, so two requests inside about a minute can both pass, bounded by the
+faucet address's own on-chain history (a claim is any tx that spends a faucet coin, so the operator's own manual spends from the faucet key count too; a judge
+returning PUSD to the faucet is not a claim). There is no database. The history read is not atomic, so two requests inside about a minute can both pass, bounded by the
 claim size; a per-IP limit (3 per hour) lives in memory and is best effort. The hard budget is what the faucet holds. The
 starter output carries at least twice the token dust, asserted before every broadcast, so the first send needs no top-up.
 Concurrent claims pick a random faucet coin and retry on a coin conflict.
@@ -110,7 +124,10 @@ Concurrent claims pick a random faucet coin and retry on a coin conflict.
 
 ## 7. Operating it
 
-`scripts/split.ts` splits the operator wallet into N (20 deployed target) lanes in one transaction, each seeded with 1 PUSD unit.
+`scripts/split.ts` splits the operator wallet into N (20 is the target) lanes in one transaction, each seeded with 1 PUSD unit.
+`scripts/sweep.ts` is the owner's `withdraw` path: it collects the pool's PUSD revenue and BCH to the operator wallet in one
+transaction (`--closed` sweeps only closed lanes). **Refilling** a lane = sweep it, then split again: there is no separate refill
+contract path.
 Mainnet spends happen only with an explicit spending cap (`--authorized-cap`); every mainnet txid is appended to
 `evidence/mainnet-txs.csv`. `npm test` runs offline (no network); `npm run build` regenerates the API bundle, type-checks, and
 builds the static app.

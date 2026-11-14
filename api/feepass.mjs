@@ -20360,7 +20360,7 @@ function buildClaim(coins, picked, recipientTokenAddress, c, provider) {
     if (bchChange >= 546n) b.addOutput({ to: c.faucetAddress, amount: bchChange });
     return b;
   };
-  let fee = 1000n;
+  let fee = 0n;
   for (let k = 0; k < 3; k++) fee = BigInt(build(fee).getTransactionSize()) * BigInt(c.feeRate ?? 1) + 2n;
   const tx = build(fee);
   const hex = tx.build();
@@ -20392,7 +20392,8 @@ async function claimStarter(chain, c, addressInput) {
       if (!CONFLICT.test(String(e.message ?? e))) throw new StarterError("CHAIN", "The network did not accept the claim. Try again in a minute.");
     }
   }
-  throw new StarterError("BUSY", `Another claim was in flight. Try again in a moment. (${String(lastErr?.message ?? lastErr).slice(0, 80)})`);
+  void lastErr;
+  throw new StarterError("BUSY", "Another claim was in flight. Try again in a moment.");
 }
 
 // src/server/feepassApi.ts
@@ -20428,6 +20429,8 @@ var IpLimiter = class {
     return true;
   }
 };
+var healthCache = null;
+var HEALTH_TTL_MS = 3e4;
 function clientIp(req) {
   return (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
 }
@@ -20437,17 +20440,21 @@ async function handle(req, deps2, limiter2) {
   const nowMs = (deps2.now ?? Date.now)();
   if (op === "health") {
     if (req.method !== "GET") return json(405, { error: "Use GET." });
+    if (healthCache && nowMs - healthCache.at < HEALTH_TTL_MS && healthCache.key === deps2.starter.faucetAddress) return json(200, healthCache.body);
     const [coins, hist, board] = await Promise.allSettled([readFaucetCoins(deps2.chain, deps2.starter), readClaimHistory(deps2.chain, deps2.starter), deps2.board()]);
     const faucetUnits = coins.status === "fulfilled" ? Number(coins.value.units) : null;
-    return json(200, {
+    const body = {
       ok: coins.status === "fulfilled" && board.status === "fulfilled" && board.value !== null,
       faucetUnits,
       faucetBchSats: coins.status === "fulfilled" ? Number(coins.value.bch.reduce((s, u) => s + u.satoshis, 0n)) : null,
       claimUnits: Number(deps2.starter.claimUnits),
       claimsToday: hist.status === "fulfilled" ? hist.value.claimsToday : null,
       dailyCap: deps2.starter.dailyCap,
-      lanesOpen: board.status === "fulfilled" && board.value ? board.value.open : null
-    });
+      lanesOpen: board.status === "fulfilled" && board.value ? board.value.open : null,
+      historyTruncated: hist.status === "fulfilled" ? hist.value.historyTruncated : null
+    };
+    healthCache = { at: nowMs, key: deps2.starter.faucetAddress, body };
+    return json(200, body);
   }
   if (op === "starter") {
     if (req.method !== "POST") return json(405, { error: "Use POST." });
@@ -20781,12 +20788,19 @@ function deps() {
     }
   };
 }
+var JSON_HEADERS = { "content-type": "application/json", "cache-control": "no-store" };
 var function_default = {
   async fetch(request) {
+    let d;
     try {
-      return await handle(request, deps(), limiter);
+      d = deps();
     } catch {
-      return new Response(JSON.stringify({ error: "The faucet is not configured.", code: "UNCONFIGURED" }), { status: 503, headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ error: "The faucet is not configured.", code: "UNCONFIGURED" }), { status: 503, headers: JSON_HEADERS });
+    }
+    try {
+      return await handle(request, d, limiter);
+    } catch {
+      return new Response(JSON.stringify({ error: "Unexpected error. Try again.", code: "INTERNAL" }), { status: 500, headers: JSON_HEADERS });
     }
   }
 };

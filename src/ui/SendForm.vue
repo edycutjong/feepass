@@ -94,7 +94,7 @@ function submit() {
       <span class="data">{{ formatUnits(preview.lane) }}</span> → the pool (the lane's own PUSD plus your {{ fee }} fee; only {{ fee }} of it is yours).
     </p>
     <p v-else-if="preview && !preview.ok" class="err">✕ {{ preview.reason }}</p>
-    <p v-else-if="board && !board.open" class="err">✕ No open lane right now: the pool is refilling.</p>
+    <p v-else-if="board && !board.open" class="err">✕ {{ board.lanes.length === 0 ? 'Pool not open yet: no funded lanes at the covenant address.' : 'All lanes are closed right now: the pool needs refilling.' }}</p>
 
     <button type="submit" class="btn go" :disabled="!canSend" data-testid="send">
       {{ busy ? 'Waiting…' : a.ok && !amountError ? `Send ${formatUnits(a.value)} PUSD` : 'Send' }}
