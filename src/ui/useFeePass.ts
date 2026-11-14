@@ -354,8 +354,9 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
   /** Checks first: if the pending version already landed, show its ticket instead of starting a conflicting send. */
   async function startOver() {
     const loaded = store.load() ?? pending.value;
+    let st: Awaited<ReturnType<typeof checkPending>> | 'offline' | null = null;
     if (validRecord(loaded)) {
-      const st = await checkPending(provider, loaded).catch(() => 'offline' as const);
+      st = await checkPending(provider, loaded).catch(() => 'offline' as const);
       if (st === 'seen') { ticketFromRecord(loaded); notice.value = null; return; }
       if (st === 'offline') {
         pending.value = loaded;
@@ -364,7 +365,9 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
       }
     }
     if (validRecord(loaded)) {
-      store.setPin(pinFrom(loaded)); // not seen on chain, maybe live elsewhere: the next send must reuse its coin
+      // not seen on chain but its coin unspent (or unchecked, when expired): maybe live elsewhere, so the next send must reuse
+      // its coin. 'superseded' = its coin was already spent by another tx, so that version can never confirm: no pin.
+      if (st === 'unknown' || st === 'expired') store.setPin(pinFrom(loaded));
       store.clear(loaded.txid);
     } else if (loaded) store.clear(); // corrupt record: never a permanent block
     pending.value = null;

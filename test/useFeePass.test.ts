@@ -308,6 +308,22 @@ describe('useFeePass', () => {
     expect(store.getPin()).toBeNull();
   });
 
+  it('start over on a superseded record (its coin already spent elsewhere) leaves no pin', async () => {
+    const store = memoryStore();
+    const fp = useFeePass({ store });
+    fund(fp);
+    await fp.resumePending();
+    await fp.scan();
+    // a record whose coin is not among the owner's coins and whose tx the server does not know: superseded
+    store.save({ in0: 'ab'.repeat(32) + ':0', ownerAddress: me.address, txid: 'cd'.repeat(32), hex: '00', laneOutpoint: 'ef'.repeat(32) + ':0',
+      laneNumber: 1, excluded: [], startedAt: Date.now(), proposed: '{}' });
+    await fp.startOver();
+    expect(store.load()).toBeNull();
+    expect(store.getPin()).toBeNull();
+    await fp.send(config.demoRecipient, 10n);
+    expect(fp.ticket.value).not.toBeNull();
+  });
+
   it('a re-send that fails on an expired record leaves a pin (the next send cannot pick another coin)', async () => {
     const store = memoryStore();
     const fp = useFeePass({ store });
