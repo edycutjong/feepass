@@ -1,13 +1,13 @@
 // FeePass's one serverless function: the starter-PUSD faucet claim and a health read. Everything else is static.
-// The faucet key comes from the FAUCET_WIF environment variable (never from the repo). The logic lives in
-// src/server/feepassApi.ts and src/core/starter.ts, both unit-tested offline.
+// Bundled to api/feepass.mjs by `npm run build:api` (Vercel's Node ESM cannot resolve extensionless imports); that bundle is
+// committed and is what runs. The faucet key comes from the FAUCET_WIF environment variable, never from the repo.
 import { binToHex, decodePrivateKeyWif, encodeCashAddress, hash160, hexToBin, secp256k1, sha256 } from '@bitauth/libauth';
 import { ElectrumNetworkProvider } from 'cashscript';
-import { handle, IpLimiter, type ApiDeps } from '../src/server/feepassApi';
-import { STARTER_DEFAULTS, type FaucetChain } from '../src/core/starter';
-import { buildBoard } from '../src/core/lanes';
-import { lockingBytecodeOf } from '../src/core/dust';
-import { appPool, config as cfg } from '../src/core/config';
+import { handle, IpLimiter, type ApiDeps } from './feepassApi';
+import { STARTER_DEFAULTS, type FaucetChain } from '../core/starter';
+import { buildBoard } from '../core/lanes';
+import { lockingBytecodeOf } from '../core/dust';
+import { appPool, config as cfg } from '../core/config';
 
 class ServerChain extends ElectrumNetworkProvider implements FaucetChain {
   constructor() { super('mainnet'); }
