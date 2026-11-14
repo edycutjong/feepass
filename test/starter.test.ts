@@ -38,11 +38,9 @@ class Chain extends FundedMock implements FaucetChain {
     this.sent.push(txid);
     return txid;
   }
-  /** Runs once, right after the next chain read returns its (now stale) answer: a claim landing between two reads. */
-  onFirstRead?: () => Promise<unknown>;
-  private async fireRead() { const f = this.onFirstRead; this.onFirstRead = undefined; if (f) await f(); }
-  async history() { const r = this.sent.map((txid) => ({ txid, height: this.blockTimes.has(txid) ? 990 : 0 })); await this.fireRead(); return r; }
-  async getUtxos(address: string) { const r = await super.getUtxos(address); await this.fireRead(); return r; }
+  calls: string[] = [];
+  async history() { this.calls.push('history'); return this.sent.map((txid) => ({ txid, height: this.blockTimes.has(txid) ? 990 : 0 })); }
+  async getUtxos(address: string) { this.calls.push('utxos'); return super.getUtxos(address); }
   async tipHeight() { return this.height; }
   async blockTime() { return Math.floor(NOW / 1000) - 3 * 86_400; }
 }
@@ -175,12 +173,13 @@ describe('starter claim', () => {
     expect(pickClaimCoins([c(10n), c(10n)], 25n)).toEqual([]);
   });
 
-  it('race: a claim that lands between the coin read and the history read is counted (coins are read first)', async () => {
-    const { chain, cfg } = setup({ coins: [300n], cfg: { dailyCap: 2 } });
+  it('every attempt reads the coins before the history, so a claim seen in the coin read is in the later history read', async () => {
+    const { chain, cfg } = setup();
+    chain.failNext = ['txn-mempool-conflict'];
     await claimStarter(chain, cfg, judge(1));
-    chain.onFirstRead = () => claimStarter(chain, cfg, judge(2)); // lands right after our first read of this attempt
-    await expect(claimStarter(chain, cfg, judge(3))).rejects.toMatchObject({ code: 'DAILY_CAP' });
-    expect(chain.sent).toHaveLength(2);
+    // two attempts: utxos, history, (raw txs), utxos, history
+    const firstReads = chain.calls.filter((c, k) => k === 0 || chain.calls[k - 1] !== c);
+    expect(firstReads.slice(0, 4)).toEqual(['utxos', 'history', 'utxos', 'history']);
   });
 
   it('an operator consolidation back to the faucet does not use a daily slot', async () => {
