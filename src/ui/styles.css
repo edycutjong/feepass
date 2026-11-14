@@ -6,7 +6,7 @@
 
 :root {
   --bg: #EEF0EB; --paper: #FBFBF7; --ink: #16202B; --muted: #5E6670; --sign: #1F4F9A; --sign-ink: #FFFFFF;
-  --housing: #111418; --before: #C8452C; --after: #1E9E5A; --caution: #F2B301; --rule: #CDD2CA;
+  --sign-dim: #B7CBEC; --housing: #111418; --before: #C8452C; --after: #1E9E5A; --caution: #F2B301; --rule: #CDD2CA;
   --font-display: "Encode Sans Condensed", "Arial Narrow", sans-serif;
   --font-body: "Public Sans", "Helvetica Neue", Arial, sans-serif;
   --font-data: "Sometype Mono", ui-monospace, monospace;

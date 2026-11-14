@@ -48,7 +48,7 @@ const heads = computed(() => {
 .closed .lamp { color: var(--before); }
 .busy .lamp { color: var(--caution); animation: blink 0.9s steps(2, jump-none) infinite; }
 .dark .lamp { background: #1b2027; }
-.dark .num { opacity: .45; }
+.dark .num { color: var(--sign-dim); opacity: 1; } /* 4.8:1 on sign blue; a faded white failed contrast */
 .paid .lamp { background: var(--after); color: var(--sign-ink); }
 .caption { margin: 8px 2px 2px; font-size: 13px; opacity: .92; }
 @keyframes blink { 50% { color: var(--housing); } }

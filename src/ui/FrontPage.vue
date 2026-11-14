@@ -207,7 +207,8 @@ require(tx.outputs.length == 3);</code></pre>
 .ctas a.btn { display: inline-flex; align-items: center; text-decoration: none; padding: 0 28px; margin: 0; }
 .big { min-height: 58px; font-size: 22px; padding: 0 28px; }
 .status { font-size: 13px; color: var(--muted); margin: 16px 0 0; letter-spacing: .03em; }
-@keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+/* transform only: the headline and lede paint on the first frame (no opacity fade delaying the largest paint) */
+@keyframes rise { from { transform: translateY(12px); } to { transform: none; } }
 
 .receipts { background: var(--paper); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
 .receipts .grid { display: grid; grid-template-columns: repeat(4, 1fr); }
@@ -250,8 +251,8 @@ h2.display { font-size: clamp(32px, 4vw, 48px); }
 .ledger .k { color: var(--muted); }
 .ledger b { font-weight: 600; }
 .ledger .plus { color: var(--sign); }
-.code { margin: 6px 0 0; background: var(--housing); color: #E6E9EE; border-radius: 6px; padding: 12px 14px; overflow-x: auto;
-  font: 400 13px/1.55 var(--font-data); white-space: pre; }
+.code { margin: 6px 0 0; background: var(--housing); color: #E6E9EE; border-radius: 6px; padding: 12px 14px;
+  font: 400 13px/1.55 var(--font-data); white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .honest { background: var(--housing); color: var(--paper); margin-top: 72px; padding: 56px 0 50px; }
 .honest h2 { color: var(--paper); }
