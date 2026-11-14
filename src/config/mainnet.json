@@ -9,7 +9,7 @@
     "maxTopUp": "675"
   },
   "lanes": 20,
-  "artifactSha256": "5ece3a4e549059a058785466c6be18b3d55151a5ed91c91d66351a674f14a52a",
+  "artifactSha256": "2855cbf3f0850188182e2116b5f1c0bd83d546506952acf2a3e9cb59851e2708",
   "explorerTx": "https://bchexplorer.info/tx/",
   "demoRecipient": "bitcoincash:zzyen2cp5plph8r5uax2qsd4s83u7x3rvylahpest0",
   "demoAmountUnits": "10",

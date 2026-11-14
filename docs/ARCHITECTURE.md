@@ -28,7 +28,7 @@ Nothing else is a valid spend of a lane except the operator's `withdraw(ownerSig
 | R1 | 2 inputs, 3 outputs, covenant is input 1 | extra inputs/outputs that smuggle value out |
 | R7 | `in1` carries PUSD | token-less lanes (every lane is seeded with PUSD) |
 | R2 | `in0` and `out0` carry PUSD | a non-PUSD "send" |
-| R8 | `out1` carries PUSD | the top-up leaving as plain BCH |
+| R8 | `out1` carries PUSD | the top-up leaving as plain BCH in this tx (the holder can move those sats later like any coin's; R6 bounds them to T per send) |
 | R3 | `out2` locks to the same covenant | the lane walking away |
 | R4 | `out2.value >= in1.value - C` (C = 2,000 sats) | draining more than a hard cap per tx |
 | R5 | `out2.tokenAmount == in1.tokenAmount + f` (equality) | undercharging, and overcharging through any front end |
@@ -129,7 +129,7 @@ so the first send needs no top-up.
 
 | Risk | Bound |
 |---|---|
-| Someone drains the pool | each tx costs the attacker `f` PUSD and the pool at most `C` sats (R4); lanes are small and refillable |
+| Someone drains the pool | per tx: the attacker pays `f` (0.01 PUSD) and the pool loses at most `C` = 2,000 sats (R4), of which at most `T` = 675 can reach the attacker's own outputs (R6). `deploy.ts` refuses unless `f` is worth ≥ 1.5 × `C` at the operator's BCH price (true up to about $333/BCH), so a drain costs the attacker more than the pool loses, and every fee stays with the pool. Over many txs it is a liveness risk, not theft: emptying 20 lanes of 100,000 sats takes about 1,000 full-cap spends (about 10 PUSD); free starter PUSD (3 × 25 units a day) pays for at most 75 spends, at most 150,000 sats a day. Refill = sweep + split (§7) |
 | Pool keeper's key leaks | the thief can sweep the pool (`withdraw`), never a user's coin; users' coins are never locked in the covenant |
 | A fake front end | cannot move a coin without the user's signature and cannot change the pool's terms (`f`, `C`); whether the user can see what they sign depends on the wallet itemizing outputs (unverified) |
 | Wallet refuses a mixed-input request | `/gate.html` records the result; not claimed compatible until a human verifies it |

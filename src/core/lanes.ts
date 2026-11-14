@@ -57,7 +57,8 @@ export function buildBoard(
   };
 }
 
-/** A uniformly random open lane not in `exclude` (F2: three judges clicking at once rarely collide). */
+/** A uniformly random open lane not in `exclude` (F2). Three simultaneous picks over 20 open lanes share a lane 14.5% of the
+ *  time (1 − 20·19·18/20³); a collision costs the loser one more signature on another lane, never a double payment. */
 export function pickLane(board: Board, exclude: ReadonlySet<string>, rng: () => number = Math.random): Lane | undefined {
   const free = board.lanes.filter((l) => l.state === 'open' && !exclude.has(l.outpoint));
   if (free.length === 0) return undefined;

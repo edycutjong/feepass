@@ -30,7 +30,8 @@ contract FeePassPool(
         require(tx.inputs[0].tokenCategory == pusdCategory);
         require(tx.outputs[0].tokenCategory == pusdCategory);
 
-        // R8 the user's change stays a PUSD output, so the top-up cannot leave as plain BCH.
+        // R8 the user's change stays a PUSD output, so in this transaction the top-up can only land on token outputs.
+        // (It is not a permanent barrier: the holder can later move those sats like any coin's; R6 bounds them to T per send.)
         require(tx.outputs[1].tokenCategory == pusdCategory);
 
         // R3 the lane returns to the same covenant.
