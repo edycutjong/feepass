@@ -259,8 +259,9 @@ async function broadcastOnce(d: FlowDeps, p: PendingSend, lane: Lane, sleep: (ms
     }
     if (!mine) return 'coin-changed';
     if (failure === 'conflict') return 'lane-conflict';
-    // Missing inputs with our coin intact: if the server already sees the lane spent, it was taken; otherwise its
-    // unconfirmed parent may still be propagating, so wait (ticking each second) and re-send the same bytes every 5 s.
+    // Missing inputs with our coin intact. The lane was picked from THIS server's own UTXO list (same provider), so if that
+    // list no longer holds it, it was spent: move on. Otherwise its unconfirmed parent may still be propagating: wait
+    // (ticking each second) and re-send the same bytes every 5 s, up to the window.
     if (waited >= waitMs) return 'lane-missing';
     try {
       const poolUtxos = await d.provider.getUtxos(d.pool.tokenAddress);
@@ -280,11 +281,14 @@ async function broadcastOnce(d: FlowDeps, p: PendingSend, lane: Lane, sleep: (ms
 export type PendingStatus = 'seen' | 'unknown' | 'superseded' | 'expired';
 
 /** On reload / second tab: has the pending send landed, is it still re-sendable, or did another tx spend its coin? */
+const NOT_FOUND = /no such (mempool or blockchain )?transaction|not found|unknown transaction|missing transaction/i;
+
+/** Throws if the server cannot be asked (callers treat that as "offline", never as an answer). */
 export async function checkPending(p: FlowProvider, rec: PendingSend, now = Date.now()): Promise<PendingStatus> {
   try {
     if (await p.getRawTransaction(rec.txid)) return 'seen';
-  } catch {
-    /* not found (or server error): fall through */
+  } catch (e) {
+    if (!NOT_FOUND.test(errText(e))) throw e; // a transient error is not "not found": a landed send must not read as superseded
   }
   if (now - rec.startedAt > PENDING_TTL_MS) return 'expired';
   return (await coinUnspent(p, rec.ownerAddress, rec.in0)) ? 'unknown' : 'superseded';
