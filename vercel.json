@@ -1,4 +1,4 @@
 {
   "rewrites": [{ "source": "/pool", "destination": "/index.html" }],
-  "functions": { "api/feepass.ts": { "maxDuration": 30 } }
+  "functions": { "api/feepass.mjs": { "maxDuration": 30 } }
 }
