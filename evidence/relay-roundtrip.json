@@ -1,0 +1,32 @@
+{
+  "ranAt": "2026-11-14T14:14:15.250Z",
+  "packages": {
+    "@wizardconnect/core": "0.2.10",
+    "@wizardconnect/dapp": "0.2.7",
+    "@wizardconnect/wallet": "0.2.4"
+  },
+  "relayUri": "wiz://?p=vm5kx2ry9y6h45jmh6xezhuk3as08cq5pvrnpyprjzsgrp66a3lq&s=<redacted>",
+  "sharedPaths": [
+    "receive",
+    "change",
+    "defi"
+  ],
+  "inputPaths": [
+    [
+      0,
+      "receive",
+      1
+    ]
+  ],
+  "signRequestsSeenByWallet": 1,
+  "verified": {
+    "sighash": "0x61",
+    "sizeBytes": 572,
+    "feeSats": 572,
+    "txid": "4b870e530a56e978c3cb7d6df82440ac2bc09243186b38629375574a362ccb76"
+  },
+  "vmAccepted": true,
+  "msToWalletReady": 1272,
+  "msTotal": 1827,
+  "scope": "protocol-level: real relay, mock coins, headless conforming wallet; not a Selene/Paytaca result"
+}
