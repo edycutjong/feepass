@@ -16,7 +16,8 @@ export interface SponsoredSendInput {
   /** The user's token-aware P2PKH cashaddr that owns `userUtxo`. */
   userAddress: string;
   lane: SpendableUtxo;
-  /** Recipient token-aware P2PKH cashaddr. P2SH recipients are refused (their dust exceeds T). */
+  /** Recipient token-aware P2PKH cashaddr. Script (P2SH) recipients are refused: P2SH32 token dust (681+ sats)
+   *  exceeds T, and P2SH20 is not supported. */
   recipient: string;
   /** PUSD base units to send. */
   amount: bigint;
@@ -33,6 +34,9 @@ export interface SponsoredSend {
   poolSubsidySats: bigint;
   outputs: { recipientSats: bigint; changeSats: bigint; laneSats: bigint; changeUnits: bigint; laneUnits: bigint };
 }
+
+/** A DER (ECDSA) signature is up to 73 bytes vs 65 for Schnorr: 8 bytes of fee headroom. */
+export const ECDSA_SLACK_BYTES = 8;
 
 export class SendError extends Error {
   constructor(
@@ -75,7 +79,7 @@ export function buildSponsoredSend(i: SponsoredSendInput): SponsoredSend {
 
   const recipientLock = lockingBytecodeOf(i.recipient);
   if (!isP2pkh(recipientLock))
-    throw new SendError('P2SH_RECIPIENT', 'Send to a regular (P2PKH) address; script addresses need more dust than the pool covers.');
+    throw new SendError('P2SH_RECIPIENT', 'Send to a regular (P2PKH) address; script addresses are not supported.');
   const userLock = lockingBytecodeOf(i.userAddress);
 
   const sendTok = { category: cat, amount: i.amount };
@@ -96,6 +100,7 @@ export function buildSponsoredSend(i: SponsoredSendInput): SponsoredSend {
 
   const assemble = (minerFee: bigint) => {
     const laneSats = i.lane.satoshis - minerFee - topUpSats;
+    if (laneSats < laneDust) throw new SendError('LANE_TOO_SMALL', 'Lane cannot cover this fee; pick another lane.');
     const b = new TransactionBuilder({ provider: i.pool.provider })
       .addInput(i.userUtxo, placeholderP2PKHUnlocker(i.userAddress))
       .addInput(i.lane, i.pool.unlock.sponsorPaid())
@@ -105,12 +110,13 @@ export function buildSponsoredSend(i: SponsoredSendInput): SponsoredSend {
     return { b, laneSats };
   };
 
-  // Fee from the serialized size (placeholder signature has the final size), iterated to a fixed point.
+  // Fee from the serialized size, iterated to a fixed point. The placeholder is sized for a 65-byte Schnorr signature;
+  // ECDSA_SLACK_BYTES keeps the tx at >= 1 sat/B if the wallet signs with a longer DER (ECDSA) signature instead.
   let minerFee = 0n;
   let built = assemble(minerFee);
   for (let k = 0; k < 4; k++) {
     const size = BigInt(built.b.getTransactionSize());
-    const next = BigInt(Math.ceil(Number(size) * feeRate));
+    const next = BigInt(Math.ceil((Number(size) + ECDSA_SLACK_BYTES) * feeRate));
     if (next === minerFee) break;
     minerFee = next;
     built = assemble(minerFee);
@@ -118,7 +124,6 @@ export function buildSponsoredSend(i: SponsoredSendInput): SponsoredSend {
   const subsidy = minerFee + topUpSats;
   if (subsidy > params.maxSubsidy)
     throw new SendError('SUBSIDY_EXCEEDS_CAP', `Subsidy ${subsidy} sats exceeds the per-tx cap ${params.maxSubsidy}.`);
-  if (built.laneSats < laneDust) throw new SendError('LANE_TOO_SMALL', 'Lane cannot cover this fee; pick another lane.');
 
   return {
     builder: built.b,
