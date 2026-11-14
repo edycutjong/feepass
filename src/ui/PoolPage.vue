@@ -16,7 +16,7 @@ const lastTxs = computed(() => [...new Set((props.board?.lanes ?? []).map((l) =>
 <template>
   <section class="wrap">
     <h1 class="display h">The pool</h1>
-    <p class="muted">A CashScript covenant holding BCH in {{ cfg.lanes }} lanes. Each sponsored send takes one lane, pays the miner fee
+    <p class="muted">A CashScript covenant holding BCH in lanes ({{ board?.lanes.length ?? 0 }} funded, {{ cfg.lanes }} planned). Each sponsored send takes one lane, pays the miner fee
       from it (at most {{ cfg.params.maxSubsidy }} sats per transaction) and must return exactly {{ formatUnits(cfg.params.feeTokens) }} PUSD to it.</p>
     <LaneBoard :board="board" :error="error" :active="null" :chosen="null" :slots="cfg.lanes" large />
     <div class="panel">
@@ -24,7 +24,7 @@ const lastTxs = computed(() => [...new Set((props.board?.lanes ?? []).map((l) =>
       <dl class="kv">
         <div><dt>Lanes open</dt><dd class="data">{{ board ? `${board.open} / ${board.lanes.length}` : '—' }}</dd></div>
         <div><dt>BCH in lanes</dt><dd class="data">{{ board ? (Number(board.poolSats) / 1e8).toFixed(8) : '—' }}</dd></div>
-        <div><dt>PUSD fees earned</dt><dd class="data">{{ board ? formatUnits(earned) : '—' }} PUSD <small class="muted">(lane PUSD minus {{ formatUnits(LANE_SEED_UNITS) }} seed per lane)</small></dd></div>
+        <div><dt>PUSD fees earned</dt><dd class="data">{{ board ? formatUnits(earned) : '—' }} PUSD <small class="muted">(estimate: PUSD in the lanes shown minus the {{ formatUnits(LANE_SEED_UNITS) }} seed each lane starts with)</small></dd></div>
         <div v-if="board && board.otherCoins"><dt>Other coins</dt><dd>+{{ board.otherCoins }} other coins at the pool address</dd></div>
       </dl>
     </div>
@@ -40,7 +40,7 @@ const lastTxs = computed(() => [...new Set((props.board?.lanes ?? []).map((l) =>
           </tr>
         </tbody>
       </table>
-      <p class="muted small">Last transaction on each lane (newest sends or the split):
+      <p class="muted small">Transaction that created each lane's current coin (a send or the split):
         <template v-for="(t, i) in lastTxs" :key="t"><a :href="cfg.explorerTx + t" target="_blank" rel="noopener" class="data">{{ shortHex(t, 4, 4) }}</a><span v-if="i < lastTxs.length - 1"> · </span></template>
       </p>
     </div>

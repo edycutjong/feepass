@@ -1,8 +1,6 @@
 <script setup lang="ts">
-defineProps<{ height: number | null; chainError: string; connected: boolean; walletName: string | null; repoUrl: string }>();
+defineProps<{ height: number | null; chainError: string; connected: boolean; walletName: string | null; repoUrl: string; payout: string }>();
 defineEmits<{ connect: []; disconnect: [] }>();
-// The human's CashTokens-format address (organizer banner rule: votes and prize payout go here).
-const payout = 'bitcoincash:zpxrc4x4mzw7my37rwt5a2sx77vc0f84gvescta8a2';
 </script>
 
 <template>
@@ -36,7 +34,7 @@ const payout = 'bitcoincash:zpxrc4x4mzw7my37rwt5a2sx77vc0f84gvescta8a2';
 .connect { background: var(--sign-ink); color: var(--sign); border-color: var(--sign-ink); box-shadow: 0 2px 0 var(--housing); }
 .connect.on { background: transparent; color: var(--sign-ink); }
 .links { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; font-size: 15px; padding-bottom: 4px; }
-.links a { color: var(--sign-ink); padding: 6px 0; }
+.links a { color: var(--sign-ink); min-height: 44px; display: inline-flex; align-items: center; }
 .addr { font-size: 12px; opacity: .85; overflow-wrap: anywhere; }
 @media (max-width: 480px) { .addr { font-size: 10px; } .brand { font-size: 26px; } .net { display: none; } .connect { margin-left: auto; } }
 </style>

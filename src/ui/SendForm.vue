@@ -108,6 +108,7 @@ input { width: 100%; min-height: 48px; padding: 10px 12px; border: 2px solid var
   transition: border-color .14s var(--ease); }
 input:hover { border-color: var(--muted); }
 input:focus { border-color: var(--ink); outline: none; }
+input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 input[aria-invalid='true'] { border-color: var(--before); }
 .amt { display: flex; align-items: center; gap: 10px; }
 .amt input { flex: 1; font-size: 22px; }
