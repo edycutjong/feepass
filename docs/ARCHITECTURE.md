@@ -47,7 +47,7 @@ wallet that itemizes outputs lets them check; a wallet that does not (unverified
 hostile front end, which could build a different send for the same coin. The app's `verifySignedTx` guards against a wallet
 altering the built transaction, not against a malicious front end. PUSD conservation across `out0`+`out1` comes from CashTokens
 consensus, not the covenant, and R6 lets those two outputs carry unrelated recipient sats. What no front end can do: make the
-pool pay more than `C` or receive less than `f`.. Constructor parameters (`ownerPk`, PUSD category, f, C, T) are in `src/config/mainnet.json`;
+pool pay more than `C` or receive less than `f`. Constructor parameters (`ownerPk`, PUSD category, f, C, T) are in `src/config/mainnet.json`;
 the pool address is derived from them in `src/core/pool.ts`, never typed.
 
 Measured shape: 572 bytes, 580 sats miner fee at the standard 1 sat/B plus 8 bytes ECDSA headroom (`evidence/tx-shape.json`).

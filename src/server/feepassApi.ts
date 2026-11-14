@@ -62,7 +62,7 @@ export async function handle(req: Request, deps: ApiDeps, limiter: IpLimiter): P
       lanesOpen: board.status === 'fulfilled' && board.value ? board.value.open : null,
       historyTruncated: hist.status === 'fulfilled' ? hist.value.historyTruncated : null,
     };
-    if (body.ok) healthCache = { at: nowMs, key: deps.starter.faucetAddress, body }; // a partial failure is never cached
+    if (body.ok && hist.status === 'fulfilled') healthCache = { at: nowMs, key: deps.starter.faucetAddress, body }; // a partial failure is never cached
     return json(200, body);
   }
 

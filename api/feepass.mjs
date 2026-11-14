@@ -20460,7 +20460,7 @@ async function handle(req, deps2, limiter2) {
       lanesOpen: board.status === "fulfilled" && board.value ? board.value.open : null,
       historyTruncated: hist.status === "fulfilled" ? hist.value.historyTruncated : null
     };
-    if (body.ok) healthCache = { at: nowMs, key: deps2.starter.faucetAddress, body };
+    if (body.ok && hist.status === "fulfilled") healthCache = { at: nowMs, key: deps2.starter.faucetAddress, body };
     return json(200, body);
   }
   if (op === "starter") {
