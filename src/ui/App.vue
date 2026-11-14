@@ -13,6 +13,8 @@ import SendForm from './SendForm.vue';
 import TicketCard from './TicketCard.vue';
 import StateNotice from './StateNotice.vue';
 import PoolPage from './PoolPage.vue';
+import FrontPage from './FrontPage.vue';
+import AppFooter from './AppFooter.vue';
 
 const fp = useFeePass();
 const { wc } = fp;
@@ -38,6 +40,8 @@ function connect() {
   if (wc.connect()) showQr.value = true;
 }
 const stopQr = computed(() => fp.connected.value);
+/** The front screen: nothing connected and no send on screen. */
+const front = computed(() => !fp.connected.value && !fp.sentTxid.value);
 
 function onSend(recipient: string, amount: bigint) {
   void fp.send(recipient, amount);
@@ -61,14 +65,15 @@ const bch = (s: bigint | null) => (s === null ? 'unknown' : (Number(s) / 1e8).to
   <PoolPage v-if="isPool" :cfg="config" :board="fp.board.value" :error="fp.boardError.value"
     :contract-address="fp.pool.address" :token-address="fp.pool.tokenAddress" />
 
-  <main v-else class="wrap">
-    <section class="hero" v-if="!fp.connected.value && !fp.sentTxid.value">
-      <h1 class="display">Send dollars. No spendable BCH needed.</h1>
-      <p class="lede">Pay the Bitcoin Cash network fee in PUSD. A covenant pays the fee; you pay {{ fee }} PUSD in the same transaction.</p>
-      <button type="button" class="btn big" @click="connect">Connect wallet</button>
-      <p class="muted small">WizardConnect wallet · mainnet</p>
-    </section>
+  <template v-else-if="front">
+    <div v-if="fp.notice.value" class="wrap">
+      <StateNotice :notice="fp.notice.value" :can-resend="!!fp.pending.value" :busy="fp.resending.value"
+        @resend="fp.resendPending()" @start-over="fp.startOver()" @dismiss="fp.notice.value = null" />
+    </div>
+    <FrontPage :fee="fee" :board="fp.board.value" :error="fp.boardError.value" :slots="config.lanes" :repo-url="config.repoUrl" @connect="connect" />
+  </template>
 
+  <main v-else class="wrap">
     <LaneBoard :board="fp.board.value" :error="fp.boardError.value" :active="fp.activeLane.value" :chosen="fp.chosenLane.value" :slots="config.lanes" />
 
     <StateNotice v-if="fp.notice.value" :notice="fp.notice.value" :can-resend="!!fp.pending.value" :busy="fp.resending.value"
@@ -129,16 +134,9 @@ const bch = (s: bigint | null) => (s === null ? 'unknown' : (Number(s) / 1e8).to
         :board="fp.board.value" :pool="fp.pool" :max-units="fp.maxUnits.value" :busy="busy" @send="onSend" />
     </template>
 
-    <section class="how" v-if="!fp.connected.value && !fp.sentTxid.value">
-      <h2 class="display">How it works</h2>
-      <ol>
-        <li>Connect a WizardConnect wallet that holds PUSD. It needs no spendable BCH.</li>
-        <li>FeePass builds one fixed transaction: your PUSD coin plus one pool lane. Your wallet signs only its own input.</li>
-        <li>The lane pays the miner fee; the covenant makes the transaction return exactly {{ fee }} PUSD to the pool.</li>
-      </ol>
-      <p><a href="/pool">Pool page</a> · <a :href="config.repoUrl + '/blob/main/contracts/FeePassPool.cash'" target="_blank" rel="noopener">Contract source</a></p>
-    </section>
   </main>
+
+  <AppFooter :repo-url="config.repoUrl" />
 
   <WizardConnectQRDialog v-if="wc.uri.value && wc.qrUri.value" :show="showQr && !stopQr" :on-close="() => (showQr = false)"
     :uri="wc.uri.value" :qr-uri="wc.qrUri.value" title="Connect a BCH wallet" subtitle="Scan with a WizardConnect wallet"
@@ -146,9 +144,6 @@ const bch = (s: bigint | null) => (s === null ? 'unknown' : (Number(s) / 1e8).to
 </template>
 
 <style scoped>
-.hero { padding: 40px 0 22px; }
-.hero h1 { font-size: 56px; max-width: 13ch; }
-.lede { font-size: 20px; max-width: 34em; margin: 14px 0 20px; }
 .big { min-height: 56px; font-size: 22px; padding: 0 28px; }
 .small { font-size: 15px; }
 .balances { display: grid; gap: 6px; }
@@ -158,10 +153,7 @@ const bch = (s: bigint | null) => (s === null ? 'unknown' : (Number(s) / 1e8).to
 .nopusd { margin: 8px 0 0; }
 .progress .step { font-size: 26px; margin: 0 0 8px; }
 .again { text-align: center; margin: 22px 0 40px; }
-.how { margin: 30px 0 50px; }
-.how h2 { font-size: 32px; }
-.how ol { padding-left: 22px; }
-@media (max-width: 480px) { .hero h1 { font-size: 40px; } .bal .big { font-size: 30px; } }
+@media (max-width: 480px) { .bal .big { font-size: 30px; } }
 .starter { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rule); display: grid; gap: 8px; justify-items: start; }
 .starter-err { color: var(--ink); margin: 0; }
 </style>

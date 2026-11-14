@@ -13,7 +13,8 @@
   --ease: cubic-bezier(.2, .7, .2, 1);
 }
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; overflow-x: clip; }
+::selection { background: var(--sign); color: var(--sign-ink); }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 400 18px/1.55 var(--font-body); font-variant-numeric: tabular-nums; }
 a { color: var(--ink); text-underline-offset: 3px; }
 a:hover { text-decoration-thickness: 2px; }
