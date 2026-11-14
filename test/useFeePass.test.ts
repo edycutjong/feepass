@@ -335,6 +335,7 @@ describe('useFeePass', () => {
     store.setPin({ ...other, pinnedAt: Date.now() });
     await fp.send(config.demoRecipient, 10n); // the pinned coin belongs to a different wallet: this one is not stranded
     expect(fp.ticket.value).not.toBeNull();
+    expect(store.getPin()!.in0).toBe(other.in0); // and that wallet's pin survives this wallet's send
     // same wallet: pin this wallet's remaining coin, then a send it can carry spends it and lifts the pin
     await fp.scan();
     const coin = fp.wallet.value!.coins[0]!;

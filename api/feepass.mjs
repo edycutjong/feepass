@@ -20523,7 +20523,7 @@ async function handle(req, deps2, limiter2) {
     if (typeof address !== "string") return json(400, { error: 'Send JSON: {"address": "bitcoincash:\u2026"}' });
     if (!limiter2.allow(clientIp(req), nowMs)) return json(429, { error: "Too many claims from this network just now. Try again later.", code: "IP_LIMIT" });
     try {
-      const deadline = deps2.claimTimeoutMs ?? 2e4;
+      const deadline = deps2.claimTimeoutMs ?? 12e3;
       const run = claimQueue.then(() => {
         let t;
         const timeout = new Promise((_2, rej) => {

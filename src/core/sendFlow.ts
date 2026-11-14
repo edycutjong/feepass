@@ -284,7 +284,7 @@ export async function runSend(d: FlowDeps, r: SendRequest): Promise<SendSuccess>
 
     const outcome = await broadcastOnce(d, pending, lane, sleep);
     if (outcome === 'ok') {
-      store.setPin(null); // in0 is spent by this send: no earlier version of it can confirm now
+      if (store.getPin()?.in0 === outpointOf(c)) store.setPin(null); // this send spent the pinned coin; another wallet's pin stays
       return { txid: verified.txid, hex: verified.hex, verified, lane, send, coin: c, proposed: req.proposed, signatures };
     }
     if (outcome === 'coin-changed') {

@@ -9,7 +9,8 @@ export interface ApiDeps {
   /** Open lanes on the pool, read by the same board rule the app uses. Null when the read failed. */
   board(): Promise<Board | null>;
   now?: () => number;
-  /** A claim that has not finished by then answers BUSY and stops holding the instance's claim queue (default 20 s). */
+  /** A claim that has not finished by then answers BUSY and stops holding the instance's claim queue (default 12 s, so a
+   *  request queued behind one slow claim still answers inside the function's 30 s limit). */
   claimTimeoutMs?: number;
 }
 
@@ -100,7 +101,7 @@ export async function handle(req: Request, deps: ApiDeps, limiter: IpLimiter): P
     if (typeof address !== 'string') return json(400, { error: 'Send JSON: {"address": "bitcoincash:…"}' });
     if (!limiter.allow(clientIp(req), nowMs)) return json(429, { error: 'Too many claims from this network just now. Try again later.', code: 'IP_LIMIT' });
     try {
-      const deadline = deps.claimTimeoutMs ?? 20_000;
+      const deadline = deps.claimTimeoutMs ?? 12_000;
       const run = claimQueue.then(() => {
         let t: ReturnType<typeof setTimeout> | undefined;
         const timeout = new Promise<never>((_, rej) => { t = setTimeout(() => rej(new StarterError('BUSY', 'The network is slow to answer. Try again in a moment.')), deadline); });
