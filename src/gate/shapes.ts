@@ -15,7 +15,13 @@ import gate from '../config/gate.json';
 export const SYNTHETIC_TXID = 'fe'.repeat(32);
 const SEND_UNITS = 10n;
 
-export interface ShapeRequest { request: WizardSignRequest; synthetic: boolean; describe: string }
+export interface ShapeRequest {
+  request: WizardSignRequest;
+  synthetic: boolean;
+  describe: string;
+  /** inputs the VM checks after signing: the whole tx for (a); only the user's input for (b), whose merchant input is a placeholder */
+  vmInputs: 'all' | number[];
+}
 
 export function shapeA(provider: NetworkProvider, coin: SpendableUtxo, owner: { tokenAddress: string; pathName: string; addressIndex: number }): ShapeRequest {
   const pool = poolContract({ ...DEFAULT_PARAMS, ownerPk: gate.ownerPk, categoryDisplay: gate.categoryDisplay }, provider);
@@ -29,6 +35,7 @@ export function shapeA(provider: NetworkProvider, coin: SpendableUtxo, owner: { 
   });
   return {
     synthetic: !cfg,
+    vmInputs: 'all',
     describe: `(a) covenant input · send 0.10 PUSD to yourself · pool pays ${send.minerFeeSats} sats fee · you pay 0.01 PUSD`,
     request: wrap(send.builder.generateWcTransactionObject({ broadcast: false, userPrompt: 'FeePass wallet check (a): send 0.10 PUSD to yourself; the pool pays the BCH fee' }), owner),
   };
@@ -55,6 +62,7 @@ export function shapeB(provider: NetworkProvider, coin: SpendableUtxo, owner: { 
     .addOutput({ to: gate.merchantAddress, amount: coin.satoshis + merchant.satoshis - payDust - changeSats - fee });
   return {
     synthetic: true,
+    vmInputs: [0],
     describe: '(b) merchant input · pay 0.10 PUSD to a merchant who adds the BCH fee input',
     request: wrap(b.generateWcTransactionObject({ broadcast: false, userPrompt: 'FeePass wallet check (b): pay 0.10 PUSD; the merchant pays the BCH fee' }), owner),
   };

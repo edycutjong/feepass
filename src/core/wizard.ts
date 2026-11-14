@@ -1,7 +1,7 @@
 // The WizardConnect side of a sponsored send: the request we hand the wallet, and the checks we run on what comes back.
 import {
   binToHex,
-  createVirtualMachineBch2025,
+  createVirtualMachineBch2026,
   decodeTransaction,
   encodeTransaction,
   hash160,
@@ -56,7 +56,8 @@ function readPush(b: Uint8Array, at: number): Push | undefined {
 
 export interface VerifiedTx { txid: string; hex: string; sizeBytes: number; feeSats: bigint; sighashType: number }
 
-const vm = createVirtualMachineBch2025(true);
+// BCH mainnet has run the 2026 rules since the May 2026 upgrade; standard (relay) mode.
+const vm = createVirtualMachineBch2026(true);
 
 /**
  * Refuse anything the wallet changed: same inputs (outpoints, sequence), byte-identical outputs, version and locktime,
@@ -64,7 +65,12 @@ const vm = createVirtualMachineBch2025(true);
  * finally the whole tx must pass the BCH VM (standard rules) against the proposed source outputs: that checks the
  * user's signature itself and every covenant rule before anything is broadcast.
  */
-export function verifySignedTx(signedHex: string, proposed: WcTransactionObject, userLockingBytecode: Uint8Array): VerifiedTx {
+/**
+ * `vmInputs`: 'all' (default) runs the whole tx through the VM — right for the sponsored send, whose pool input carries a
+ * complete unlock. Pass the indexes the wallet signed (e.g. [0]) when other inputs still hold placeholders, as in the
+ * merchant-input wallet check, where the merchant's own signature is not part of the request.
+ */
+export function verifySignedTx(signedHex: string, proposed: WcTransactionObject, userLockingBytecode: Uint8Array, vmInputs: 'all' | number[] = 'all'): VerifiedTx {
   const bytes = Uint8Array.from(signedHex.match(/../g)?.map((h) => parseInt(h, 16)) ?? []);
   const tx = decodeTransaction(bytes);
   if (typeof tx === 'string') throw new VerifyError('DECODE', `Wallet returned an undecodable transaction: ${tx}`);
@@ -97,8 +103,15 @@ export function verifySignedTx(signedHex: string, proposed: WcTransactionObject,
   const feeSats = inSats - outSats;
   if (feeSats < BigInt(bytes.length)) throw new VerifyError('FEE', `Fee ${feeSats} sats is below 1 sat/B for ${bytes.length} B.`);
   const sourceOutputs = proposed.sourceOutputs.map((o) => ({ lockingBytecode: o.lockingBytecode, valueSatoshis: o.valueSatoshis, token: o.token }));
-  const ok = vm.verify({ sourceOutputs, transaction: tx });
-  if (ok !== true) throw new VerifyError('SCRIPT', `The signed transaction does not validate: ${ok}`);
+  if (vmInputs === 'all') {
+    const ok = vm.verify({ sourceOutputs, transaction: tx });
+    if (ok !== true) throw new VerifyError('SCRIPT', `The signed transaction does not validate: ${ok}`);
+  } else {
+    for (const inputIndex of vmInputs) {
+      const ok = vm.stateSuccess(vm.evaluate({ inputIndex, sourceOutputs, transaction: tx }));
+      if (ok !== true) throw new VerifyError('SCRIPT', `Input ${inputIndex} does not validate: ${ok}`);
+    }
+  }
   const txid = binToHex(hash256(bytes).slice().reverse());
   return { txid, hex: signedHex, sizeBytes: bytes.length, feeSats, sighashType };
 }

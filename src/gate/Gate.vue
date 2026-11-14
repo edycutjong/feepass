@@ -47,16 +47,22 @@ async function scan() {
     addresses.value = deriveAddresses(paths);
     const found: typeof coins.value = [];
     let bch = 0n;
-    await Promise.all(addresses.value.map(async (a) => {
+    spendableBch.value = null;
+    // allSettled: one slow or failing address lookup must not hide the coins found at the others.
+    const settled = await Promise.allSettled(addresses.value.map(async (a) => {
       const utxos = await provider.getUtxos(a.address);
       for (const u of utxos) {
         if (!u.token) bch += u.satoshis;
         else if (u.token.category === gate.categoryDisplay && !u.token.nft) found.push({ ...u, owner: a });
       }
     }));
+    const failed = settled.filter((r) => r.status === 'rejected').length;
     spendableBch.value = bch;
     coins.value = found.sort((x, y) => Number(y.token!.amount - x.token!.amount));
-    if (found.length === 0) scanError.value = 'No PUSD found on mainnet in the addresses this wallet shared.';
+    if (found.length === 0)
+      scanError.value = failed
+        ? `No PUSD found yet: ${failed} of ${settled.length} address lookups failed. Press Rescan.`
+        : 'No PUSD found on mainnet in the addresses this wallet shared.';
   } catch (e) {
     scanError.value = (e as Error).message;
   } finally {
@@ -97,7 +103,7 @@ async function run(which: 'a' | 'b') {
       return;
     }
     try {
-      const v = verifySignedTx(res.signedTransaction, shape.request.proposed, lockingBytecodeOf(owner.tokenAddress));
+      const v = verifySignedTx(res.signedTransaction, shape.request.proposed, lockingBytecodeOf(owner.tokenAddress), shape.vmInputs);
       results.value.unshift({ id: ++seq, shape: shape.describe, synthetic: shape.synthetic, outcome: 'signed-verified', detail: `${v.sizeBytes} B, fee ${v.feeSats} sats`, sighash: '0x' + v.sighashType.toString(16), txid: v.txid, at });
     } catch (e) {
       results.value.unshift({ id: ++seq, shape: shape.describe, synthetic: shape.synthetic, outcome: 'signed-rejected-by-check', detail: (e as Error).message, at });
