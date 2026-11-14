@@ -1,0 +1,3 @@
+{
+  "rewrites": [{ "source": "/pool", "destination": "/index.html" }]
+}
