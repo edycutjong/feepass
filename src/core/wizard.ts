@@ -6,6 +6,7 @@ import {
   encodeTransaction,
   hash160,
   hash256,
+  hexToBin,
   stringify,
   type TransactionCommon,
 } from '@bitauth/libauth';
@@ -71,7 +72,10 @@ const vm = createVirtualMachineBch2026(true);
  * merchant-input wallet check, where the merchant's own signature is not part of the request.
  */
 export function verifySignedTx(signedHex: string, proposed: WcTransactionObject, userLockingBytecode: Uint8Array, vmInputs: 'all' | number[] = 'all'): VerifiedTx {
-  const bytes = Uint8Array.from(signedHex.match(/../g)?.map((h) => parseInt(h, 16)) ?? []);
+  // strict: whole-byte hex only, so the bytes verified here are exactly the bytes broadcast (returned below as `hex`)
+  if (typeof signedHex !== 'string' || !/^(?:[0-9a-fA-F]{2})+$/.test(signedHex))
+    throw new VerifyError('DECODE', 'Wallet returned something that is not transaction hex.');
+  const bytes = hexToBin(signedHex);
   const tx = decodeTransaction(bytes);
   if (typeof tx === 'string') throw new VerifyError('DECODE', `Wallet returned an undecodable transaction: ${tx}`);
   const want = proposed.transaction as TransactionCommon;
@@ -113,5 +117,5 @@ export function verifySignedTx(signedHex: string, proposed: WcTransactionObject,
     }
   }
   const txid = binToHex(hash256(bytes).slice().reverse());
-  return { txid, hex: signedHex, sizeBytes: bytes.length, feeSats, sighashType };
+  return { txid, hex: binToHex(bytes), sizeBytes: bytes.length, feeSats, sighashType };
 }

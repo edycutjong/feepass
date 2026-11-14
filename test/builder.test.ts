@@ -88,6 +88,13 @@ describe('verifySignedTx (what the wallet returns)', () => {
     const s = setup(); const { req, hex } = signed(s);
     expect(code(() => verifySignedTx(hex, req.proposed, s.user.lock))).toBe('ok');
   });
+  it('refuses hex that is not whole bytes (a trailing nibble, a non-hex pair) and returns exactly the bytes it verified', () => {
+    const s = setup(); const { req, hex } = signed(s);
+    expect(code(() => verifySignedTx(hex + 'a', req.proposed, s.user.lock))).toBe('DECODE');
+    expect(code(() => verifySignedTx(hex.slice(0, -2) + 'zz', req.proposed, s.user.lock))).toBe('DECODE');
+    expect(code(() => verifySignedTx('', req.proposed, s.user.lock))).toBe('DECODE');
+    expect(verifySignedTx(hex.toUpperCase(), req.proposed, s.user.lock).hex).toBe(hex.toLowerCase());
+  });
   it('refuses sighash 0x41 (ALL|FORKID without UTXOS)', () => {
     const s = setup(); const { req, hex } = signed(s, 0x41);
     expect(code(() => verifySignedTx(hex, req.proposed, s.user.lock))).toBe('SIGHASH');
