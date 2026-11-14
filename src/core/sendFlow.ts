@@ -56,15 +56,31 @@ export class RelayTimeoutError extends Error {
   }
 }
 
+/** Held from the moment a wallet is asked to sign until the signed tx is recorded (or the request ends), so a second tab
+ *  cannot ask for a conflicting signature while the first one is still in the wallet. */
+export interface SigningLock { in0: string; at: number }
+/** Longer than the 3-minute signing timeout: a lock older than this was left by a closed tab. */
+export const SIGNING_LOCK_MS = 4 * 60 * 1000;
+
 export interface PendingStore {
   load(): PendingSend | null;
   save(p: PendingSend): void;
-  clear(): void;
+  /** Removes the record; given a txid, only if the stored record is that one (never another tab's record). */
+  clear(txid?: string): void;
+  getLock(): SigningLock | null;
+  setLock(l: SigningLock | null): void;
 }
 
 export function memoryStore(): PendingStore {
   let v: PendingSend | null = null;
-  return { load: () => v, save: (p) => (v = p), clear: () => (v = null) };
+  let lock: SigningLock | null = null;
+  return {
+    load: () => v,
+    save: (p) => (v = p),
+    clear: (txid) => { if (!txid || v?.txid === txid) v = null; },
+    getLock: () => lock,
+    setLock: (l) => (lock = l),
+  };
 }
 
 export interface FlowProvider {
@@ -148,6 +164,8 @@ export async function runSend(d: FlowDeps, r: SendRequest): Promise<SendSuccess>
   const store = d.store ?? memoryStore();
   // One send per coin at a time, across tabs: a stored record means a signed version may be in flight.
   if (store.load()) throw new FlowError('SEND_IN_PROGRESS', 'A send from this browser is still pending. Resolve it first (re-send the same transaction or start over).');
+  const held = store.getLock();
+  if (held && now() - held.at < SIGNING_LOCK_MS) throw new FlowError('SEND_IN_PROGRESS', 'A wallet signature is already being requested from this browser (this or another tab). Finish or cancel it in the wallet first.');
   if (r.coins.length === 0) throw new FlowError('NO_COIN', 'None of your PUSD coins can carry this amount plus the fee and 0.01 PUSD change.');
   const excluded = new Set<string>();
   let coin: UserCoin | undefined;
@@ -192,26 +210,31 @@ export async function runSend(d: FlowDeps, r: SendRequest): Promise<SendSuccess>
     signatures++;
     d.onEvent?.({ stage: 'signing', lane, attempt: signatures, send });
     const req = toWizardRequest(send, { pathName: c.owner.pathName, addressIndex: c.owner.addressIndex }, 'FeePass: send PUSD, the pool pays the BCH network fee');
-    let signedHex: string;
-    try {
-      signedHex = await d.sign(req);
-    } catch (e) {
-      if (e instanceof RelayTimeoutError) throw new FlowError('RELAY_TIMEOUT', `${e.message} Nothing was sent; press Send to ask again (the wallet stays connected).`);
-      throw new FlowError('WALLET_REJECTED', `The wallet did not sign: ${errText(e)}. Nothing was sent.`);
-    }
+    let pending: PendingSend;
     let verified: VerifiedTx;
+    store.setLock({ in0: outpointOf(c), at: now() });
     try {
-      verified = verifySignedTx(signedHex, req.proposed, lockingBytecodeOf(c.owner.tokenAddress));
-    } catch (e) {
-      if (e instanceof VerifyError && e.code === 'SIGHASH') throw new FlowError('NONCONFORMANT_SIGHASH', `This wallet's signature can't be used: ${e.message}`);
-      throw new FlowError('WALLET_CHANGED_TX', `${errText(e)} Nothing was broadcast.`);
+      let signedHex: string;
+      try {
+        signedHex = await d.sign(req);
+      } catch (e) {
+        if (e instanceof RelayTimeoutError) throw new FlowError('RELAY_TIMEOUT', `${e.message} Nothing was sent; press Send to ask again (the wallet stays connected).`);
+        throw new FlowError('WALLET_REJECTED', `The wallet did not sign: ${errText(e)}. Nothing was sent.`);
+      }
+      try {
+        verified = verifySignedTx(signedHex, req.proposed, lockingBytecodeOf(c.owner.tokenAddress));
+      } catch (e) {
+        if (e instanceof VerifyError && e.code === 'SIGHASH') throw new FlowError('NONCONFORMANT_SIGHASH', `This wallet's signature can't be used: ${e.message}`);
+        throw new FlowError('WALLET_CHANGED_TX', `${errText(e)} Nothing was broadcast.`);
+      }
+      pending = {
+        in0: outpointOf(c), ownerAddress: c.owner.address, txid: verified.txid, hex: verified.hex,
+        laneOutpoint: lane.outpoint, laneNumber: lane.number, excluded: [...excluded], startedAt: now(), proposed: stringify(req.proposed),
+      };
+      store.save(pending); // recorded BEFORE the lock is released and before the first broadcast
+    } finally {
+      store.setLock(null);
     }
-
-    const pending: PendingSend = {
-      in0: outpointOf(c), ownerAddress: c.owner.address, txid: verified.txid, hex: verified.hex,
-      laneOutpoint: lane.outpoint, laneNumber: lane.number, excluded: [...excluded], startedAt: now(), proposed: stringify(req.proposed),
-    };
-    store.save(pending);
     d.onEvent?.({ stage: 'broadcasting', lane, txid: verified.txid });
 
     const outcome = await broadcastOnce(d, pending, lane, sleep);
@@ -219,13 +242,13 @@ export async function runSend(d: FlowDeps, r: SendRequest): Promise<SendSuccess>
       return { txid: verified.txid, hex: verified.hex, verified, lane, send, coin: c, proposed: req.proposed, signatures };
     }
     if (outcome === 'coin-changed') {
-      store.clear();
+      store.clear(pending.txid);
       throw new FlowError('COIN_CHANGED', 'Your PUSD coin was spent by another transaction while this send was pending. Nothing more was signed.');
     }
     if (outcome === 'unknown') throw new FlowError('BROADCAST_UNKNOWN', 'The server did not answer. The same signed bytes can be re-sent safely.', pending);
 
     // Lane failure: exclude it, refresh the board, ask for one more signature if allowed.
-    store.clear();
+    store.clear(pending.txid);
     excluded.add(lane.outpoint);
     if (signatures > maxResigns) throw new FlowError('POOL_BUSY', 'Pool busy: try again in a minute.');
     d.onEvent?.({ stage: 'retrying', lane, reason: outcome as 'lane-conflict' | 'lane-rejected' | 'lane-missing', attempt: signatures });
