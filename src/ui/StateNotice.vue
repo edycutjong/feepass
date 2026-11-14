@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // One named notice per failure state (ui.md "States"): ink on paper, a red ✕ and the reason. No separate error red.
 import type { Notice } from './useFeePass';
-defineProps<{ notice: Notice; canResend: boolean }>();
+defineProps<{ notice: Notice; canResend: boolean; busy?: boolean }>();
 defineEmits<{ resend: []; startOver: []; dismiss: [] }>();
 const titles: Record<string, string> = {
   NO_COIN: 'No coin fits this send', RELAY_TIMEOUT: 'Wallet did not answer', SEND_IN_PROGRESS: 'Send in progress', BAD_RECIPIENT: 'Check the address', POOL_EMPTY: 'Pool refilling', POOL_BUSY: 'Pool busy', WALLET_REJECTED: 'Not signed',
@@ -16,8 +16,8 @@ const titles: Record<string, string> = {
     <p class="t"><span class="x" aria-hidden="true">✕</span> {{ titles[notice.code] ?? notice.code }}</p>
     <p class="m">{{ notice.message }}</p>
     <div class="row">
-      <button v-if="canResend" type="button" class="btn small" @click="$emit('resend')">Re-send the same transaction</button>
-      <button v-if="canResend" type="button" class="btn ghost small" @click="$emit('startOver')">Start over with this coin</button>
+      <button v-if="canResend" type="button" class="btn small" :disabled="busy" @click="$emit('resend')">{{ busy ? 'Re-sending…' : 'Re-send the same transaction' }}</button>
+      <button v-if="canResend" type="button" class="btn ghost small" :disabled="busy" @click="$emit('startOver')">Start over with this coin</button>
       <button v-if="!canResend" type="button" class="btn ghost small" @click="$emit('dismiss')">OK</button>
     </div>
   </div>

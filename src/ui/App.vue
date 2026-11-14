@@ -58,7 +58,7 @@ const bch = (s: bigint | null) => (s === null ? 'unknown' : (Number(s) / 1e8).to
 
     <LaneBoard :board="fp.board.value" :error="fp.boardError.value" :active="fp.activeLane.value" :chosen="fp.chosenLane.value" :slots="config.lanes" />
 
-    <StateNotice v-if="fp.notice.value" :notice="fp.notice.value" :can-resend="!!fp.pending.value"
+    <StateNotice v-if="fp.notice.value" :notice="fp.notice.value" :can-resend="!!fp.pending.value" :busy="fp.resending.value"
       @resend="fp.resendPending()" @start-over="fp.startOver()" @dismiss="fp.notice.value = null" />
 
     <template v-if="fp.sentTxid.value">

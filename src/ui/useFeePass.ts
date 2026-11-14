@@ -70,6 +70,7 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
   /** Set on every successful broadcast, even if the ticket cannot be computed: the explorer link always shows. */
   const sentTxid = ref<string | null>(null);
   const pending = shallowRef<PendingSend | null>(null);
+  const resending = ref(false);
   let inFlight = false;
 
   async function refreshChain() {
@@ -86,7 +87,9 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
     if (!force && sentTxid.value) return;
     try {
       const busy = new Set(activeLane.value ? [activeLane.value] : []);
-      board.value = buildBoard(await provider.getUtxos(pool.tokenAddress), {
+      const utxos = await provider.getUtxos(pool.tokenAddress);
+      if (!force && sentTxid.value) return; // a ticket appeared while this fetch was in flight: keep the frozen board
+      board.value = buildBoard(utxos, {
         categoryDisplay: config.categoryDisplay, laneLock: poolLock, params: config.params, n: config.lanes, busy,
       });
       boardError.value = '';
@@ -191,33 +194,49 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
     } catch (e) {
       activeLane.value = null;
       phase.value = 'idle';
-      if (e instanceof FlowError) {
+      if (e instanceof FlowError && e.code === 'SEND_IN_PROGRESS') {
+        // Another tab (or an earlier send) left a record: resolve it the same way a reload does; its outcome sets the notice.
+        notice.value = null;
+        await resumePending();
+      } else if (e instanceof FlowError) {
         notice.value = { code: e.code, message: e.message };
         if (e.pending) pending.value = e.pending;
-        if (e.code === 'SEND_IN_PROGRESS') await resumePending();
       } else {
         notice.value = { code: 'CHAIN', message: (e as Error).message };
       }
-      void refreshBoard(true);
+      if (!sentTxid.value) void refreshBoard(true);
     } finally {
       inFlight = false;
     }
   }
 
   function ticketFromRecord(rec: PendingSend) {
-    showTicket({
-      txid: rec.txid, hex: rec.hex, proposed: proposedFromPending(rec), ownerAddress: rec.ownerAddress,
-      laneOutpoint: rec.laneOutpoint, laneNumber: rec.laneNumber, before: null, after: null, at: `${utcStamp()} (recovered)`,
-    });
+    try {
+      showTicket({
+        txid: rec.txid, hex: rec.hex, proposed: proposedFromPending(rec), ownerAddress: rec.ownerAddress,
+        laneOutpoint: rec.laneOutpoint, laneNumber: rec.laneNumber, before: null, after: null, at: `${utcStamp()} (recovered)`,
+      });
+    } catch {
+      // unreadable record (older format, edited storage): the txid is still known and was seen on chain
+      sentTxid.value = rec.txid;
+      ticket.value = null;
+      phase.value = 'done';
+    }
     store.clear();
     pending.value = null;
   }
 
+  const validRecord = (r: PendingSend | null): r is PendingSend =>
+    !!r && typeof r.txid === 'string' && /^[0-9a-f]{64}$/.test(r.txid) && typeof r.hex === 'string' && typeof r.in0 === 'string'
+    && typeof r.ownerAddress === 'string' && typeof r.startedAt === 'number' && typeof r.proposed === 'string';
+
   /** On load / second tab: never offer a fresh form for a coin that already has a signed version in flight. */
   async function resumePending() {
     try {
-      const rec = store.load();
-      if (!rec) return;
+      const loaded = store.load();
+      if (!loaded) return;
+      if (!validRecord(loaded)) { store.clear(); return; } // corrupt record: never a permanent block
+      const rec = loaded;
       if (Date.now() - rec.startedAt > PENDING_TTL_MS * 2) { store.clear(); return; }
       let st: Awaited<ReturnType<typeof checkPending>> | 'offline';
       try { st = await checkPending(provider, rec); } catch { st = 'offline'; }
@@ -238,7 +257,16 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
 
   async function resendPending() {
     const rec = pending.value;
-    if (!rec) return;
+    if (!rec || resending.value) return;
+    resending.value = true;
+    try {
+      await resendOnce(rec);
+    } finally {
+      resending.value = false;
+    }
+  }
+
+  async function resendOnce(rec: PendingSend) {
     const r = await rebroadcast(provider, rec);
     if (r === 'ok') { ticketFromRecord(rec); notice.value = null; return; }
     if (r === 'unknown' || r === 'missing-inputs') {
@@ -247,21 +275,29 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
         : 'The pool lane is still propagating to this server. The signed bytes are kept; try again in a few seconds.' };
       return;
     }
-    const st = await checkPending(provider, rec).catch(() => 'unknown' as const);
+    const st = await checkPending(provider, rec).catch(() => 'offline' as const);
     if (st === 'seen') { ticketFromRecord(rec); notice.value = null; return; }
+    if (st === 'offline') { notice.value = { code: 'BROADCAST_UNKNOWN', message: 'The server rejected the re-send and could not be asked about the first version. The signed bytes are kept; try again shortly.' }; return; }
     store.clear();
     pending.value = null;
     notice.value = st === 'superseded'
       ? { code: 'COIN_CHANGED', message: 'Your PUSD coin was spent by another transaction. Nothing more was signed.' }
-      : { code: 'POOL_BUSY', message: 'That version was rejected (its lane was taken). Send again: the same coin is reused.' };
+      : r === 'conflict'
+        ? { code: 'POOL_BUSY', message: 'That version lost its lane to another send. Send again: the same coin is reused.' }
+        : { code: 'POOL_BUSY', message: `The server rejected that version (${r}). Nothing was spent; send again to build a fresh one with the same coin.` };
   }
 
   /** Checks first: if the pending version already landed, show its ticket instead of starting a conflicting send. */
   async function startOver() {
-    const rec = pending.value ?? store.load();
-    if (rec) {
-      const st = await checkPending(provider, rec).catch(() => 'unknown' as const);
-      if (st === 'seen') { ticketFromRecord(rec); notice.value = null; return; }
+    const loaded = pending.value ?? store.load();
+    if (validRecord(loaded)) {
+      const st = await checkPending(provider, loaded).catch(() => 'offline' as const);
+      if (st === 'seen') { ticketFromRecord(loaded); notice.value = null; return; }
+      if (st === 'offline') {
+        pending.value = loaded;
+        notice.value = { code: 'PENDING', message: 'The server could not be reached to check the pending send, so it is kept. Try again in a moment.' };
+        return;
+      }
     }
     store.clear();
     pending.value = null;
@@ -275,7 +311,7 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
   }
 
   return {
-    wc, connected, provider, pool, height, chainError, board, boardError, wallet, scanning, maxUnits, resuming,
+    wc, connected, provider, pool, height, chainError, board, boardError, wallet, scanning, maxUnits, resuming, resending,
     phase, activeLane, chosenLane, signingSend, waitSeconds, signatures, retryReason, notice, ticket, ticketLane, ticketAt, sentTxid, pending,
     refreshChain, refreshBoard, scan, send, resumePending, resendPending, startOver,
   };
