@@ -42,9 +42,12 @@ outputs will list the three before signing (unverified for any named wallet unti
 The pool constrains only what the pool pays and receives. It does **not** check: who `out0` pays or how much PUSD it carries
 (only that it is PUSD), where `out1` (the change) goes, or the miner-fee level (it bounds only the lane's loss via R4 and the
 extras via R6). Those outputs are bound by the user's own `SIGHASH_ALL|FORKID|UTXOS` signature on input 0, which commits to every
-output. The pool does not "bind the recipient"; the user's signature does, and the app re-verifies the returned transaction
-before broadcasting. A misbehaving front end can build a different send, but it cannot make the user sign it unseen and it
-cannot make the pool pay more than `C` or receive less than `f`. Constructor parameters (`ownerPk`, PUSD category, f, C, T) are in `src/config/mainnet.json`;
+output. The pool does not "bind the recipient"; the user's signature does, and only to the extent the user sees what they sign: a
+wallet that itemizes outputs lets them check; a wallet that does not (unverified, see the status line) cannot protect them from a
+hostile front end, which could build a different send for the same coin. The app's `verifySignedTx` guards against a wallet
+altering the built transaction, not against a malicious front end. PUSD conservation across `out0`+`out1` comes from CashTokens
+consensus, not the covenant, and R6 lets those two outputs carry unrelated recipient sats. What no front end can do: make the
+pool pay more than `C` or receive less than `f`.. Constructor parameters (`ownerPk`, PUSD category, f, C, T) are in `src/config/mainnet.json`;
 the pool address is derived from them in `src/core/pool.ts`, never typed.
 
 Measured shape: 572 bytes, 580 sats miner fee at the standard 1 sat/B plus 8 bytes ECDSA headroom (`evidence/tx-shape.json`).
@@ -117,7 +120,7 @@ Concurrent claims pick a random faucet coin and retry on a coin conflict.
 |---|---|
 | Someone drains the pool | each tx costs the attacker `f` PUSD and the pool at most `C` sats (R4); lanes are small and refillable |
 | Pool keeper's key leaks | the thief can sweep the pool (`withdraw`), never a user's coin; users' coins are never locked in the covenant |
-| A fake front end | cannot move a coin without the user's signature; the wallet lists the outputs; the covenant fixes the fee at exactly `f` |
+| A fake front end | cannot move a coin without the user's signature and cannot change the pool's terms (`f`, `C`); whether the user can see what they sign depends on the wallet itemizing outputs (unverified) |
 | Wallet refuses a mixed-input request | `/gate.html` records the result; not claimed compatible until a human verifies it |
 | Faucet drained by fresh addresses | 3 claims per UTC day, small claim size, health route, daily top-up during judging |
 | Pool empty / all lanes busy | named states in the UI ("Pool not open yet", "Pool refilling", "Pool busy"); nothing is signed |

@@ -114,7 +114,7 @@ const bch = (s: bigint | null) => (s === null ? 'unknown' : (Number(s) / 1e8).to
       <section v-if="busy" class="panel progress" aria-live="polite">
         <template v-if="fp.phase.value === 'signing'">
           <p class="display step">Lane {{ chosenNumber }} · approve in your wallet</p>
-          <p v-if="fp.signingSend.value" class="muted">Your wallet will list 3 outputs: {{ formatUnits(fp.signingSend.value.outputs.changeUnits) }} PUSD back to you,
+          <p v-if="fp.signingSend.value" class="muted">This transaction has 3 outputs (a wallet that itemizes them will show): {{ formatUnits(fp.signingSend.value.outputs.changeUnits) }} PUSD back to you,
             {{ formatUnits(fp.signingSend.value.outputs.laneUnits) }} PUSD to the pool (the lane's own PUSD plus your {{ fee }} fee), and your send. Network fee
             {{ fp.signingSend.value.minerFeeSats }} sats, paid by the lane.</p>
           <p v-if="fp.signatures.value > 1" class="muted">{{ fp.retryReason.value === 'lane-conflict' ? 'The previous lane was taken by another send' : 'The previous lane could not be used' }}; this is signature {{ fp.signatures.value }}, same coin.</p>

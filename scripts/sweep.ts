@@ -47,7 +47,7 @@ async function main() {
   if (inSats - fee < dust) throw new Error(`swept value ${inSats} sats cannot pay the fee ${fee} and keep the output above dust ${dust}: sweep more lanes together`);
   requireCap(net, fee);
   const tx = await build(fee).send();
-  appendEvidence(net, { txid: tx.txid, kind: 'sweep', sizeBytes: tx.hex.length / 2, minerFeeSats: fee, operatorOutflowSats: fee, pusdFeeUnits: units });
+  appendEvidence(net, { txid: tx.txid, kind: 'sweep', sizeBytes: tx.hex.length / 2, minerFeeSats: fee, operatorOutflowSats: fee });
   console.log(JSON.stringify({ network: net, txid: tx.txid, inputs: picked.length, pusdUnits: Number(units), sats: Number(inSats - fee), feeSats: Number(fee), closedOnly: onlyClosed }, null, 2));
 }
 

@@ -88,7 +88,7 @@ function submit() {
     </dl>
 
     <p v-if="preview?.ok" class="outputs" data-testid="wallet-outputs">
-      Your wallet will list 3 outputs:
+      This transaction has 3 outputs (a wallet that itemizes them will show):
       <span class="data">{{ formatUnits(preview.send) }}</span> → {{ shortAddress(r.ok ? r.value : '') }} ·
       <span class="data">{{ formatUnits(preview.change) }}</span> → you ·
       <span class="data">{{ formatUnits(preview.lane) }}</span> → the pool (the lane's own PUSD plus your {{ fee }} fee; only {{ fee }} of it is yours).

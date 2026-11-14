@@ -89,7 +89,7 @@ export async function readClaimHistory(chain: FaucetChain, c: StarterConfig): Pr
   const timeOf = async (height: number): Promise<number> => {
     if (height <= 0) return Math.floor(nowMs / 1000); // mempool
     if (tip && height < tip - DAY_LOOKBACK_BLOCKS) return 0; // older than a day
-    if (!timeCache.has(height)) timeCache.set(height, await chain.blockTime(height));
+    if (!timeCache.has(height)) timeCache.set(height, await chain.blockTime(height).catch(() => { throw new StarterError('CHAIN', 'Could not read the faucet history.'); }));
     return timeCache.get(height)!;
   };
 
@@ -100,7 +100,8 @@ export async function readClaimHistory(chain: FaucetChain, c: StarterConfig): Pr
   for (let i = 0; i < recent.length; i += limit) {
     await Promise.all(
       recent.slice(i, i + limit).map(async (e) => {
-        const tx = decodeTransaction(hexToBin(await chain.getRawTransaction(e.txid)));
+        const raw = await chain.getRawTransaction(e.txid).catch(() => { throw new StarterError('CHAIN', 'Could not read the faucet history.'); });
+        const tx = decodeTransaction(hexToBin(raw));
         if (typeof tx === 'string' || !spendsFaucetCoin(tx, pubHex)) return;
         claimCount++;
         for (const o of tx.outputs) {
@@ -121,7 +122,7 @@ export interface FaucetCoins {
 }
 
 export async function readFaucetCoins(chain: FaucetChain, c: StarterConfig): Promise<FaucetCoins> {
-  const utxos = await chain.getUtxos(c.faucetTokenAddress);
+  const utxos = await chain.getUtxos(c.faucetTokenAddress).catch(() => { throw new StarterError('CHAIN', 'Could not read the faucet coins.'); });
   const pusd = utxos.filter((u) => u.token && u.token.category === c.category && !u.token.nft && u.token.amount > 0n);
   const bch = utxos.filter((u) => !u.token);
   return { pusd, bch, units: pusd.reduce((s, u) => s + u.token!.amount, 0n) };

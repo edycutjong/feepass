@@ -80,6 +80,14 @@ describe('api/feepass', () => {
     expect((await handle(post({ address: judge }), deps, new IpLimiter())).status).toBe(503);
     expect(chain.sent).toHaveLength(0);
   });
+  it('a chain read failure while checking history is a 502 CHAIN, never a 500 or a raw error; a partial health answer is not cached', async () => {
+    const { deps, chain } = rig();
+    (chain as any).getRawTransaction = async () => { throw new Error('socket hang up at 10.0.0.1'); };
+    (chain as any).sent.push('ab'.repeat(32));
+    const r = await handle(post({ address: judge }), deps, new IpLimiter());
+    expect(r.status).toBe(502);
+    expect(JSON.stringify(await r.json())).not.toContain('10.0.0.1');
+  });
   it('per-IP limit: the fourth claim in the window from one IP is 429 before any chain work', async () => {
     const { deps, chain } = rig(1000n);
     const lim = new IpLimiter(3, 1000);
