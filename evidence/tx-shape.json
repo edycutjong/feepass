@@ -1,0 +1,55 @@
+{
+  "measuredAt": "2026-11-14T14:06:46.613Z",
+  "note": "Computed offline from the compiled artifact; sizes are exact serializations of the signed tx (Schnorr, sighash 0x61).",
+  "params": {
+    "feeTokens": 1,
+    "maxSubsidy": 2000,
+    "maxTopUp": 675
+  },
+  "redeemScriptBytes": 160,
+  "redeemScriptOpcodes": 56,
+  "dust": {
+    "p2pkhTokenOutput_10units": 651,
+    "p2pkhTokenOutput_253units": 657,
+    "laneP2sh32TokenOutput_2units": 681,
+    "laneP2sh32TokenOutput_253units": 687
+  },
+  "sends": [
+    {
+      "userCoinSats": 1000,
+      "placeholderSizeBytes": 572,
+      "signedSizeBytes": 572,
+      "minerFeeSats": 572,
+      "topUpSats": 302,
+      "poolSubsidySats": 874,
+      "feeRateSatPerByte": 1
+    },
+    {
+      "userCoinSats": 1330,
+      "placeholderSizeBytes": 572,
+      "signedSizeBytes": 572,
+      "minerFeeSats": 572,
+      "topUpSats": 0,
+      "poolSubsidySats": 572,
+      "feeRateSatPerByte": 1
+    },
+    {
+      "userCoinSats": 2000,
+      "placeholderSizeBytes": 572,
+      "signedSizeBytes": 572,
+      "minerFeeSats": 572,
+      "topUpSats": 0,
+      "poolSubsidySats": 572,
+      "feeRateSatPerByte": 1
+    },
+    {
+      "userCoinSats": 5000,
+      "placeholderSizeBytes": 572,
+      "signedSizeBytes": 572,
+      "minerFeeSats": 572,
+      "topUpSats": 0,
+      "poolSubsidySats": 572,
+      "feeRateSatPerByte": 1
+    }
+  ]
+}
