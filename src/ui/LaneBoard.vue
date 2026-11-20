@@ -8,12 +8,15 @@ const props = defineProps<{ board: Board | null; error: string; active: string |
 
 const heads = computed(() => {
   const lanes = props.board?.lanes ?? [];
-  // Pool not funded yet (or still loading): N unlit heads, so the gantry reads as a gantry and nothing claims a lane exists.
-  if (lanes.length === 0) return Array.from({ length: props.slots }, (_, k) => ({ key: `dark-${k}`, number: k + 1, state: 'dark', glyph: '', label: `Lane ${k + 1} not funded` }));
+  // Pool not funded yet, still loading, or the read failed: N unlit heads, so the gantry reads as a gantry and nothing claims a lane exists.
+  const unknown = !props.board || !!props.error;
+  if (lanes.length === 0) return Array.from({ length: props.slots }, (_, k) => ({ key: `dark-${k}`, number: k + 1, state: 'dark', glyph: '', label: `Lane ${k + 1} ${unknown ? 'unknown' : 'not funded'}` }));
   return lanes.map((l) => {
-    const state = l.outpoint === props.chosen ? 'paid' : l.outpoint === props.active ? 'busy' : l.state;
-    const glyph = state === 'closed' ? '✕' : '↓';
-    const word = state === 'paid' ? 'paid' : state;
+    const own = l.outpoint === props.chosen ? 'paid' : l.outpoint === props.active ? 'busy' : null;
+    // A failed refresh keeps the last board: its lanes go unlit instead of re-asserting open/closed from a stale read.
+    const state = own ?? (props.error ? 'dark' : l.state);
+    const glyph = state === 'closed' ? '✕' : state === 'dark' ? '' : '↓';
+    const word = state === 'dark' ? 'unknown' : state;
     return { key: l.outpoint, number: l.number, state, glyph, label: `Lane ${l.number} ${word}` };
   });
 });

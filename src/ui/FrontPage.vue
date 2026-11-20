@@ -25,6 +25,8 @@ const blob = (path: string) => `${props.repoUrl}/blob/main/${path}`;
 
 const lanesFunded = computed(() => props.board?.lanes.length ?? 0);
 const poolUnfunded = computed(() => !!props.board && lanesFunded.value === 0);
+/** Funded, but every lane is below its close line: no send can be served right now. */
+const allClosed = computed(() => !!props.board && lanesFunded.value > 0 && props.board.open === 0);
 
 // Count-ups: the text already holds the final number (print, screenshots, no motion); the animation only runs from 0 when the
 // receipt strip scrolls into view and the user has not asked for reduced motion.
@@ -66,10 +68,11 @@ onBeforeUnmount(() => { io?.disconnect(); cancelAnimationFrame(raf); });
           <button type="button" class="btn big" data-testid="hero-connect" @click="$emit('connect')">Connect wallet</button>
           <a class="btn big ghost" href="/deck/">Pitch deck</a>
         </div>
-        <p class="status" :class="{ closed: poolUnfunded }" data-testid="front-status">
+        <p class="status" :class="{ closed: poolUnfunded || allClosed }" data-testid="front-status">
           <template v-if="error">Pool status unavailable right now. You can still connect and see your balances.</template>
           <template v-else-if="!board">Reading the pool from mainnet…</template>
           <template v-else-if="poolUnfunded"><strong>The pool is not open yet.</strong> You can connect and see your balances; sends start once lanes are funded.</template>
+          <template v-else-if="allClosed"><strong>All {{ lanesFunded }} lanes are closed right now.</strong> You can connect and see your balances; sends start again when the operator refills them.</template>
           <template v-else><strong>{{ board.open }} of {{ lanesFunded }} lanes open.</strong> Connect a WizardConnect wallet that holds PUSD and send.</template>
         </p>
       </div>
@@ -116,7 +119,7 @@ onBeforeUnmount(() => { io?.disconnect(); cancelAnimationFrame(raf); });
       <div class="rules">
         <article class="rule r5">
           <h3 class="display">Exactly {{ fee }} PUSD back</h3>
-          <p>The pool's side is an equality: the lane always gets back exactly {{ fee }} PUSD, never more, never less.</p>
+          <p>The pool's side is an equality: the lane always comes back holding exactly {{ fee }} PUSD more than it had, never more, never less.</p>
           <div class="ledger" aria-label="The lane's PUSD before and after one send">
             <p><span class="k">in1</span><span>lane holds</span><b>n PUSD</b></p>
             <p><span class="k">out2</span><span>lane returns</span><b>n <span class="plus">+ {{ fee }}</span> PUSD</b></p>
@@ -180,8 +183,8 @@ require(tx.outputs.length == 3);</code></pre>
       </details>
       <details>
         <summary>What stops someone from draining the pool?</summary>
-        <p>A send costs a lane its miner fee: {{ std.minerFeeSats }} sats for a standard send, {{ measured.maxMeasuredSubsidySats }} sats when the
-          lane also tops up a small coin's dust, and never more than {{ fmt(measured.maxSubsidySats) }} sats. Every send pays the pool exactly
+        <p>A send costs a lane its miner fee: {{ std.minerFeeSats }} sats for a standard send, {{ measured.maxMeasuredSubsidySats }} sats in the largest
+          measured case, where the lane also tops up a small coin's dust (at most {{ measured.maxTopUpSats }} sats of top-up per send), and never more than {{ fmt(measured.maxSubsidySats) }} sats. Every send pays the pool exactly
           {{ fee }} PUSD. The covenant bounds each send, not the total: many sends can still use lanes up, and a lane that runs low closes
           (✕) until the operator refills it. Lanes are separate coins, so one send touches one lane.</p>
       </details>
@@ -195,6 +198,7 @@ require(tx.outputs.length == 3);</code></pre>
         <p>Yes: mainnet is the only network it uses. The header shows the live block height, and every chain read uses a mainnet server.
           <template v-if="error">The pool status could not be read just now.</template>
           <template v-else-if="poolUnfunded">The pool's lanes are not funded yet, so sends wait for the pool to open.</template>
+          <template v-else-if="allClosed">All {{ lanesFunded }} lanes are closed right now, so sends wait for the operator to refill them.</template>
           <template v-else-if="board">{{ board.open }} of {{ lanesFunded }} lanes are open right now.</template>
           <template v-else>The pool status is still loading.</template></p>
       </details>

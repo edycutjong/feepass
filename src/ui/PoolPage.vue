@@ -17,7 +17,7 @@ const lastTxs = computed(() => [...new Set((props.board?.lanes ?? []).map((l) =>
   <main class="wrap">
     <h1 class="display h">The pool</h1>
     <p class="muted">A CashScript covenant holding BCH in lanes ({{ board?.lanes.length ?? 0 }} funded, {{ cfg.lanes }} planned). Each sponsored send takes one lane, pays the miner fee
-      from it (at most {{ cfg.params.maxSubsidy }} sats per transaction) and must return exactly {{ formatUnits(cfg.params.feeTokens) }} PUSD to it.</p>
+      from it (at most {{ cfg.params.maxSubsidy }} sats per transaction) and must return the lane holding exactly {{ formatUnits(cfg.params.feeTokens) }} PUSD more than it had.</p>
     <LaneBoard :board="board" :error="error" :active="null" :chosen="null" :slots="cfg.lanes" large />
     <div class="panel">
       <h2>Totals</h2>
