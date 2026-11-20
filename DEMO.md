@@ -1,6 +1,6 @@
 # FeePass: demo and reproduction
 
-Sections 1–3 run offline from a fresh clone; section 4 needs tBCH on a chipnet key and section 5 needs the funded mainnet pool. Each number names the command or file that produces it; recorded runs are in `evidence/`.
+Sections 1–2 run offline from a fresh clone; section 3 needs internet (the real WizardConnect relay, with mock coins); section 4 needs tBCH on a chipnet key and section 5 needs the funded mainnet pool. Each number names the command or file that produces it; recorded runs are in `evidence/`.
 
 ## Status
 

@@ -11,7 +11,7 @@
 
   <br/>
 
-  ![Bitcoin Cash](https://img.shields.io/badge/Bitcoin_Cash-mainnet_app-0AC18E?style=flat)
+  ![Bitcoin Cash](https://img.shields.io/badge/Bitcoin_Cash-mainnet_only-0AC18E?style=flat)
   ![CashScript](https://img.shields.io/badge/CashScript_0.14-1F4F9A?style=flat)
   ![Vue](https://img.shields.io/badge/Vue_3-42b883?style=flat&logo=vue.js&logoColor=white)
   ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
@@ -80,7 +80,7 @@ The covenant's eight rules, what each prevents, and the failure model are in [do
 
 **On a real chain (chipnet, Bitcoin Cash's public test network):** one sponsored send, broadcast and read back on 2026-11-20 by [`scripts/chipnet-spike.ts`](scripts/chipnet-spike.ts) through the same builder and VM check the app uses. Txid [`78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c`](https://chipnet.imaginary.cash/tx/78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c) (chipnet explorer): 2 inputs (the user's token coin, one pool lane), 3 outputs, 572 bytes, 580 sats miner fee paid by the lane, exactly 1 fee unit back to the pool, user spendable BCH 0 before and 0 after. Chipnet has no PUSD, so a test token stands in for it, and a headless test key signs, not a named wallet. Record: [`evidence/chipnet-send.json`](evidence/chipnet-send.json), rows in [`evidence/chipnet-txs.csv`](evidence/chipnet-txs.csv).
 
-Verifiable offline, reproducible with `npm test`:
+Recorded measurements (`npm test` runs the covenant, builder and flow tests offline; `npx tsx scripts/measure-shape.ts` recomputes the shape offline; the relay run needs internet):
 
 | Evidence | File |
 |---|---|

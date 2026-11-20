@@ -23,8 +23,8 @@ Friction found while building FeePass, written as it happened. Dates are UTC.
   "no token" instead of `amount: 0`, and `scripts/split.ts` omits the PUSD change output when none is left.
 - **A default-parameter trap in our own helpers:** passing `undefined` for an optional token argument picks up the default
   token. Tests use `null` for "no token".
-- **Chipnet funding needs a human.** The chipnet faucet we found (https://tbch.googol.cash/) asks for a captcha, so the
-  hot wallet's chipnet run waits for a person to request coins.
+- **Chipnet funding needs a human.** The chipnet faucet we found (https://tbch.googol.cash/) asks for a captcha, so a person had to
+  request the coins; the chipnet run then completed on 2026-11-20 (`evidence/chipnet-send.json`).
 - **Verify the wallet's signature before broadcasting, not just its shape.** Checking the sighash byte and the public key
   is not enough: a malformed signature with the right key would pass. `verifySignedTx` now runs the whole signed tx
   through libauth's BCH 2026 VM (standard rules, the rules mainnet runs since May 2026) against the proposed source
