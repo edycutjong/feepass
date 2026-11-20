@@ -241,7 +241,7 @@ body.show-notes .notes-panel { display: block; }
       <p class="display big anim d2">The lane <span class="plate-word">pays the fee.</span><br>You pay a cent.</p>
       <p class="tagline anim d3"><strong>Send dollars on Bitcoin Cash. No spendable BCH needed.</strong></p>
       <p class="chip anim d4"><span>GitHub</span>github.com/edycutjong/feepass</p>
-      <p class="chip anim d4"><span>Status</span>mainnet pool not funded yet · one real send ran on chipnet</p>
+      <p class="chip anim d4"><span>Status</span>mainnet pool not funded · one send on chipnet</p>
     </div>
     <img class="bigmark anim d2" src="icon.svg" alt="" width="420" height="420">
     <aside class="notes">Tagline: send dollars on Bitcoin Cash with no spendable BCH. A covenant lane pays the miner fee; you pay 0.01 PUSD in the same transaction. Not "zero BCH" (a token coin carries dust) and not free: the fee is 0.01 PUSD per send, paid to the pool. MIT licensed.</aside>
@@ -284,10 +284,10 @@ body.show-notes .notes-panel { display: block; }
       <div class="uses anim d2">
         <div class="use"><b>CashTokens</b><span>PUSD in, PUSD out</span></div>
         <div class="use"><b>CashScript covenant</b><span>the pool of lanes</span></div>
-        <div class="use"><b>WizardConnect</b><span>the user's wallet signs (no named wallet verified yet)</span></div>
+        <div class="use"><b>WizardConnect</b><span>the user's wallet signs (named wallets unverified)</span></div>
         <div class="use"><b>BCH mainnet</b><span>the app refuses other networks</span></div>
       </div>
-      <div class="shape anim d3"><span>2 inputs · 3 outputs</span><span>572 bytes (Schnorr)</span><span>580 sats fee (8 B ECDSA headroom)</span><span>sighash 0x61</span><span>measured on chipnet</span></div>
+      <div class="shape anim d3"><span>2 inputs · 3 outputs</span><span>572 bytes (Schnorr)</span><span>580 sats fee (+8 B headroom)</span><span>sighash 0x61</span><span>measured on chipnet</span></div>
     </div>
     <div class="anim d3">
 <pre class="code"><span class="k">function</span> sponsorPaid() {
