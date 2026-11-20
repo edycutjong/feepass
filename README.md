@@ -159,6 +159,10 @@ Wallets and merchants that onboard new users in PUSD want those users to transac
 
 Live app: <https://feepass.edycu.dev> · Pitch deck: <https://feepass.edycu.dev/deck/> (arrow keys, N for notes) · How to reproduce every number: [DEMO.md](DEMO.md).
 
+## 🤖 How this was built
+
+Built by Edy Cu (edycutjong) with AI coding agents; I own the design decisions, the wallet and the prize address. The neighbours we looked at are in [docs/COMPARISON.md](docs/COMPARISON.md).
+
 ## 📄 License
 
 [MIT](LICENSE).
