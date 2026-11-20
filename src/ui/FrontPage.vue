@@ -90,7 +90,8 @@ onBeforeUnmount(() => { io?.disconnect(); cancelAnimationFrame(raf); });
 
     <section class="live wide" aria-labelledby="live-h">
       <div class="live-head">
-        <h2 id="live-h" class="display">The pool, live from mainnet<span v-if="poolUnfunded && !error" data-testid="live-h-closed">: not open yet</span></h2>
+        <h2 id="live-h" class="display">The pool, live from mainnet<span v-if="error" data-testid="live-h-error">: status unavailable</span><span
+          v-else-if="poolUnfunded" data-testid="live-h-closed">: not open yet</span><span v-else-if="allClosed" data-testid="live-h-allclosed">: all lanes closed</span></h2>
         <p class="muted">Each signal head is one pool lane, read from a mainnet server: <strong>↓</strong> open, <strong>✕</strong> below the
           {{ fmt(measured.maxSubsidySats) }}-sat per-send cap plus the lane's own dust, so the app will not pick it. Unlit heads mean there is no lane to
           show: the pool is not funded, the read is still loading, or the read failed. A send takes one open lane at random.</p>
@@ -195,7 +196,7 @@ require(tx.outputs.length == 3);</code></pre>
       </details>
       <details>
         <summary>Is this really mainnet?</summary>
-        <p>Yes: mainnet is the only network it uses. The header shows the live block height, and every chain read uses a mainnet server.
+        <p>Yes: mainnet is the only network it uses, and every chain read uses a mainnet server. On a wide screen the header shows the live block height.
           <template v-if="error">The pool status could not be read just now.</template>
           <template v-else-if="poolUnfunded">The pool's lanes are not funded yet, so sends wait for the pool to open.</template>
           <template v-else-if="allClosed">All {{ lanesFunded }} lanes are closed right now, so sends wait for the operator to refill them.</template>

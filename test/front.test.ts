@@ -93,6 +93,7 @@ describe('FrontPage', () => {
     const stale = mount(FrontPage, { props: { ...props, board: emptyBoard, error: 'timeout' } });
     expect(stale.find('[data-testid=honest-pool]').exists()).toBe(false); // a failed refresh never re-asserts the old board
     expect(stale.find('[data-testid=live-h-closed]').exists()).toBe(false);
+    expect(stale.get('#live-h').text()).toBe('The pool, live from mainnet: status unavailable');
     expect(stale.text()).toContain('could not be read just now');
   });
   it('a funded pool drops the not-open line and counts open lanes', () => {
@@ -117,6 +118,7 @@ describe('FrontPage', () => {
     expect(status.text()).toContain('All 1 lanes are closed right now.');
     expect(status.text()).not.toContain('and send');
     expect(status.classes()).toContain('closed');
+    expect(w.get('#live-h').text()).toBe('The pool, live from mainnet: all lanes closed');
   });
   it('a failed refresh after a good read: the stale lanes go unlit, none claims open', () => {
     const utxo: SpendableUtxo = { txid: 'cc'.repeat(32), vout: 0, satoshis: 100_000n, lockingBytecode: '' } as SpendableUtxo;
