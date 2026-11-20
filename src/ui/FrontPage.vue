@@ -16,7 +16,7 @@ const fmt = (n: number) => n.toLocaleString('en-US');
 /** n = a count-up target; text = a fixed figure (the fee is a decimal amount, not a count). */
 const receipts = computed(() => [
   { n: null, text: props.fee, unit: 'PUSD', label: 'the only fee you pay, in the same transaction', proof: 'src/config/mainnet.json' },
-  { n: std.minerFeeSats, text: '', unit: 'sats', label: 'miner fee of a standard send, paid by the lane', proof: 'evidence/tx-shape.json' },
+  { n: std.minerFeeSats, text: '', unit: 'sats', label: `miner fee of a standard send, paid by the lane (1 sat per byte + ${std.minerFeeSats - std.signedSizeBytes} bytes of ECDSA headroom)`, proof: 'evidence/tx-shape.json' },
   { n: measured.maxSubsidySats, text: '', unit: 'sats', label: 'the most one lane can lose in one send', proof: 'src/config/mainnet.json' },
   { n: std.signedSizeBytes, text: '', unit: 'bytes', label: 'a standard send: 2 inputs, 3 outputs (Schnorr signature)', proof: 'evidence/tx-shape.json' },
 ]);
