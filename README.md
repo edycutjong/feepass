@@ -1,12 +1,12 @@
 <div align="center">
   <img src="docs/assets/icon.svg" alt="FeePass icon" width="144">
   <h1>FeePass 🎫</h1>
-  <p><em>A covenant pays the Bitcoin Cash network fee. You pay it back in PUSD.</em></p>
-  <img src="docs/assets/readme-hero-animated.svg" alt="FeePass: a covenant pays the Bitcoin Cash network fee and you pay it back in PUSD. Lane 14 turns green; the ticket prints: fee paid in PUSD, no spendable BCH used, txid on the explorer." width="100%">
+  <p><em>Send PUSD on Bitcoin Cash with no spendable BCH: a covenant pays the network fee, and you pay it back in PUSD in the same transaction.</em></p>
+  <img src="docs/assets/readme-hero-animated.svg" alt="Illustration of FeePass: a covenant pays the Bitcoin Cash network fee and you pay it back in PUSD. Lane 14 turns green and a sample ticket prints: fee paid in PUSD, no spendable BCH used." width="100%">
 
   <br/>
 
-  [![Live Demo](https://img.shields.io/badge/🚀_Live-Demo-1F4F9A?style=for-the-badge)](https://feepass.edycu.dev)
+  [![Live App](https://img.shields.io/badge/🚀_Live-App-1F4F9A?style=for-the-badge)](https://feepass.edycu.dev)
   [![Built for BCH BLAZE 2026](https://img.shields.io/badge/DoraHacks-BCH_BLAZE_2026-8b5cf6?style=for-the-badge)](https://dorahacks.io/hackathon/bchblaze2026/detail)
 
   <br/>
@@ -21,6 +21,8 @@
 
 ---
 
+> **Status:** the app is live at <https://feepass.edycu.dev> and one real sponsored send has run on chipnet (Bitcoin Cash's public test network, txid `78be2edf…f848c`). The **mainnet pool is not funded yet**, so on the live app you can connect and see your balances, and a send stops at "Pool not open yet". Details under Live Deployment.
+
 ## 📸 See it in Action
 
 <p align="center">
@@ -33,7 +35,7 @@ The picture is an illustration: it shows open lanes and a **sample** ticket, not
 
 ### The Problem
 
-A new user holds dollars (PUSD, a CashToken on Bitcoin Cash) and **no BCH**. Every transaction needs a miner fee paid in BCH, so they cannot move any of those dollars. Getting BCH first means an exchange detour: an extra step before a new user can move any of those dollars.
+A new user holds dollars (PUSD, a CashToken on Bitcoin Cash) and **no spendable BCH**. Every transaction needs a miner fee paid in BCH, and sending part of a PUSD coin needs two token outputs of about 650 sats of dust each, so their wallet may not let them send those dollars on. Getting BCH first means an exchange detour: an extra step before a new user can move any of them.
 
 ### The Solution
 
@@ -67,16 +69,18 @@ The covenant's eight rules, what each prevents, and the failure model are in [do
 | | Property | Enforced by |
 |---|---|---|
 | F1 | The sender pays the fee in dollars: exactly 0.01 PUSD returns to the pool (R5 is an equality, so no front end can overcharge through it) | covenant R5, `test/covenant.test.ts` |
-| F2 | Concurrent senders do not collide: 20 lanes, a random open lane per send, re-sign on `txn-mempool-conflict` (at most 2 re-signs) | `src/core/lanes.ts`, `test/flow.test.ts` |
+| F2 | Concurrent senders do not collide: 20 lanes by design, a random open lane per send, re-sign on `txn-mempool-conflict` (at most 2 re-signs) | `src/core/lanes.ts`, `test/flow.test.ts` |
 | F3 | Fixed transaction shape; the pool pays only the miner fee plus at most 675 sats of extras, and loses at most 2,000 sats per send | covenant R1, R4, R6 |
 | F4 | The claim is "no spendable BCH", never "zero BCH" | copy in `src/ui/`, this file |
 | F5 | The covenant does not bind the recipient; the user's own signature does | [ARCHITECTURE §1](docs/ARCHITECTURE.md#what-the-covenant-does-not-check) |
 
 ## ⛓️ Live Deployment
 
-> **Status, stated plainly:** the app and the starter route are live at <https://feepass.edycu.dev>. The **mainnet pool is not funded yet**, so this repository contains **no pool address and no mainnet txid**, and the app shows "Pool not open yet" until a lane exists. This section is updated, with explorer links, when the operator tools first run on mainnet; every mainnet txid is then appended to `evidence/mainnet-txs.csv`.
+> **Status, stated plainly:** the app and the starter route are live at <https://feepass.edycu.dev>. The **mainnet pool is not funded yet**: the covenant address is derived from `src/config/mainnet.json` and shown on `/pool`, but no lane at it holds BCH, so there is **no mainnet FeePass txid** and the app shows "Pool not open yet". The starter faucet is empty too. Today a judge can connect a wallet and see balances; a send needs a funded lane. This section is updated, with explorer links, when the operator tools first run on mainnet; their txids are appended to `evidence/mainnet-txs.csv`.
 
-What is verifiable today, all offline and reproducible with `npm test`:
+**On a real chain (chipnet, Bitcoin Cash's public test network):** one sponsored send, broadcast and read back on 2026-11-20 by [`scripts/chipnet-spike.ts`](scripts/chipnet-spike.ts) through the same builder and VM check the app uses. Txid `78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c`: 2 inputs (the user's token coin, one pool lane), 3 outputs, 572 bytes, 580 sats miner fee paid by the lane, exactly 1 fee unit back to the pool, user spendable BCH 0 before and 0 after. Chipnet has no PUSD, so a test token stands in for it, and a headless test key signs, not a named wallet. Record: [`evidence/chipnet-send.json`](evidence/chipnet-send.json), rows in [`evidence/chipnet-txs.csv`](evidence/chipnet-txs.csv).
+
+Verifiable offline, reproducible with `npm test`:
 
 | Evidence | File |
 |---|---|
@@ -120,7 +124,9 @@ npm test        # 184 tests (183 run before the first build), offline
 npm run dev     # the app, reading Bitcoin Cash mainnet
 ```
 
-### Try it with your own wallet (about 60 seconds)
+### Try it with your own wallet (about 60 seconds, once the pool is funded)
+
+Today the pool and the starter faucet are not funded: step 1 connects and shows your balances, step 2 answers "The faucet is out for now", and **Send** stops at "Pool not open yet".
 
 1. Open <https://feepass.edycu.dev> and press **Connect wallet**; approve in a WizardConnect wallet.
 2. No PUSD yet? Press **Get 0.25 starter PUSD** (one claim per address, 3 per UTC day; the starter faucet is not funded yet, check `/api/feepass?op=health`).

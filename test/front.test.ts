@@ -55,7 +55,9 @@ describe('FrontPage', () => {
     const w = mount(FrontPage, { props: { ...props, board: emptyBoard } });
     expect(w.get('[data-testid=front-status]').text()).toContain('The pool is not open yet.');
     expect(w.find('[data-testid=honest-pool]').exists()).toBe(true);
+    expect(w.get('#live-h').text()).toBe('The pool, live from mainnet: not open yet');
     expect(w.text()).toContain('The ticket above is a sample');
+    expect(w.get('[data-testid=testnet-proof]').attributes('href')).toMatch(/\/blob\/main\/DEMO\.md$/);
   });
   it('the drain answer states the measured lane cost and that the total is not bounded', () => {
     const w = mount(FrontPage, { props: { ...props, board: emptyBoard } });
@@ -73,6 +75,7 @@ describe('FrontPage', () => {
     expect(failed.get('[data-testid=front-status]').text()).toContain('Pool status unavailable');
     const stale = mount(FrontPage, { props: { ...props, board: emptyBoard, error: 'timeout' } });
     expect(stale.find('[data-testid=honest-pool]').exists()).toBe(false); // a failed refresh never re-asserts the old board
+    expect(stale.find('[data-testid=live-h-closed]').exists()).toBe(false);
     expect(stale.text()).toContain('could not be read just now');
   });
   it('a funded pool drops the not-open line and counts open lanes', () => {
@@ -82,6 +85,7 @@ describe('FrontPage', () => {
     const w = mount(FrontPage, { props: { ...props, board } });
     expect(w.get('[data-testid=front-status]').text()).toContain('1 of 1 lanes open.');
     expect(w.find('[data-testid=honest-pool]').exists()).toBe(false);
+    expect(w.get('#live-h').text()).toBe('The pool, live from mainnet');
   });
   it('the hero button asks to connect', async () => {
     const w = mount(FrontPage, { props: { ...props, board: emptyBoard } });

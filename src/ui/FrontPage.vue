@@ -87,7 +87,7 @@ onBeforeUnmount(() => { io?.disconnect(); cancelAnimationFrame(raf); });
 
     <section class="live wide" aria-labelledby="live-h">
       <div class="live-head">
-        <h2 id="live-h" class="display">The pool, live from mainnet</h2>
+        <h2 id="live-h" class="display">The pool, live from mainnet<span v-if="poolUnfunded && !error" data-testid="live-h-closed">: not open yet</span></h2>
         <p class="muted">Each signal head is one pool lane, read from a mainnet server: <strong>↓</strong> open, <strong>✕</strong> below the
           {{ fmt(measured.maxSubsidySats) }}-sat per-send cap plus the lane's own dust, so the app will not pick it. Unlit heads mean there is no lane to
           show: the pool is not funded, the read is still loading, or the read failed. A send takes one open lane at random.</p>
@@ -153,7 +153,8 @@ require(tx.outputs.length == 3);</code></pre>
           <li><strong>Not free, not gasless.</strong> You pay {{ fee }} PUSD per send. That is the fee, and the pool's revenue.</li>
           <li><strong>Not the recipient's guard.</strong> The covenant does not check who gets paid. Your own signature covers the outputs, as far as your wallet shows them.</li>
           <li><strong>Not a mainnet receipt.</strong> The ticket above is a sample: its figures are computed offline from the compiled covenant.<span
-            v-if="poolUnfunded && !error" data-testid="honest-pool"> The mainnet pool is not funded yet.</span></li>
+            v-if="poolUnfunded && !error" data-testid="honest-pool"> The mainnet pool is not funded yet.</span> The same send has run once on
+            Bitcoin Cash's public test network, with a test token in place of PUSD (<a :href="blob('DEMO.md')" data-testid="testnet-proof">DEMO.md, section 4</a>).</li>
           <li><strong>Not bounded in total.</strong> The covenant caps what each send can take from a lane; many sends can still use lanes up, and the operator refills them.</li>
           <li><strong>Not verified on a named wallet yet.</strong> Wallet results are recorded on the <a href="/gate.html">wallet gate page</a> by a person holding the wallet.</li>
         </ul>
