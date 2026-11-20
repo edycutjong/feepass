@@ -1,0 +1,3 @@
+txid,kind,first_seen_utc,block_height,size_bytes,miner_fee_sats,pool_subsidy_sats,pusd_fee_units,user_spendable_before_sats,user_spendable_after_sats,lane_outpoint,running_total_sats,external
+204de942da7742dfb164a56ac224c8df5dccbc145ca1edee719ccff961f84990,genesis,2026-11-20T20:24:55.447Z,,406,1000,,,,,204de942da7742dfb164a56ac224c8df5dccbc145ca1edee719ccff961f84990:0,102000,false
+78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c,send,2026-11-20T20:25:01.566Z,,572,580,882,1,0,0,,102000,false

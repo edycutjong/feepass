@@ -1,0 +1,32 @@
+{
+  "what": "One real sponsored send on chipnet (Bitcoin Cash's public test network). Built and checked by the same functions the app uses: buildSponsoredSend (src/core/sponsoredSend.ts) builds it, toWizardRequest (src/core/wizard.ts) makes the sign request, src/core/headlessSigner.ts signs input 0 only (sighash 0x61) in place of a wallet, and verifySignedTx (src/core/wizard.ts) checks it on the BCH 2026 VM before broadcast. Produced by `npx tsx scripts/chipnet-spike.ts --network chipnet`.",
+  "not": "Not mainnet and not PUSD: PUSD exists only on mainnet, so the genesis tx mints a test fungible token that stands in for it (same covenant rules, constructor category = the test token). The user key is a headless test key, not a named wallet.",
+  "network": "chipnet",
+  "category": "916efe7c03384218ef7e55c63f965a3831bc50cb1c025bfed829722389a440c2",
+  "pool": "bchtest:r04nr9ef40pwcng7vgrgzae0268k9cpv9yxkev6md3h8euuc4au2jxrz448ku",
+  "user": "bchtest:zrnvf6nfert0hdsamz08vvf8qnrqg4hyzv32r6w42l",
+  "genesisTxid": "204de942da7742dfb164a56ac224c8df5dccbc145ca1edee719ccff961f84990",
+  "genesis": "mints the test token, seeds one pool lane with 100,000 sats + 1 unit (R7), gives the user key one 1,000-sat coin holding 200 units and no other BCH",
+  "sponsoredTxid": "78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c",
+  "sponsoredSend": {
+    "sizeBytes": 572,
+    "inputs": [
+      "in0: user coin, 1,000 sats + 200 units, signed by the user key",
+      "in1: pool lane, 100,000 sats + 1 unit, unlocked by the covenant (no key)"
+    ],
+    "outputs": [
+      "out0: 651 sats + 10 units to the recipient",
+      "out1: 651 sats + 189 units change to the user",
+      "out2: 99,118 sats + 2 units back to the pool (1 seed + exactly 1 fee unit, R5)"
+    ],
+    "minerFeeSats": 580,
+    "laneSubsidySats": 882,
+    "laneSubsidyNote": "580 miner fee + 302 sats top-up: the user coin held 1,000 sats and the two token outputs need 651 each (R6 allows at most 675)",
+    "feeUnits": 1,
+    "userSpendableBchBefore": 0,
+    "userSpendableBchAfter": 0,
+    "sighash": "0x61"
+  },
+  "readback": "both txids fetched back from a chipnet Fulcrum server with ElectrumNetworkProvider('chipnet') on 2026-11-20 after broadcast; outputs above are from that readback",
+  "rows": "evidence/chipnet-txs.csv"
+}
