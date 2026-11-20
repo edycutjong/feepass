@@ -36,7 +36,7 @@ cat evidence/tx-shape.json
 | Fee the user pays | `params.feeTokens` | 1 base unit = 0.01 PUSD (2 decimals) |
 | Covenant size | `redeemScriptBytes` | 160 bytes |
 
-The app and the chipnet send in section 4 pay 580 sats (572 bytes plus 8 bytes of ECDSA headroom); the relay run in section 3 used exactly 572. Recompute it: `npx tsx scripts/measure-shape.ts` (offline; compiles the covenant and serializes a signed send).
+The app and the chipnet send in section 4 pay 580 sats (1 sat/B × (572 bytes + 8 bytes of headroom for an ECDSA signature)); the relay run in section 3 used exactly 572. Recompute it: `npx tsx scripts/measure-shape.ts` (offline; compiles the covenant and serializes a signed send).
 
 ## 3. Check the wallet protocol (real relay, mock coins)
 

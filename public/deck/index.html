@@ -301,7 +301,7 @@ body.show-notes .notes-panel { display: block; }
     <span class="hl">require(tx.outputs[2].tokenAmount ==</span>
     <span class="hl">        tx.inputs[1].tokenAmount + feeTokens);</span>
 }</pre>
-      <p class="codecap">excerpt · FeePassPool.cash · same 572 B / 580 sats in a real chipnet send; not yet on mainnet</p>
+      <p class="codecap">FeePassPool.cash · 572 B / 580 sats in a real chipnet send; not on mainnet yet</p>
     </div>
     <aside class="notes">One UTXO of the covenant is one lane. A send spends the user's PUSD coin (in0, signed by the user's wallet with SIGHASH_ALL|UTXOS, 0x61) and one lane (in1, no key). The excerpt omits R2, R3, R6, R7, R8 and the owner's withdraw path for space; the full contract is 8 rules plus withdraw. 572 bytes with a Schnorr signature; an ECDSA signature can add a few bytes, which the fee calculation allows for. Sizes from evidence/tx-shape.json.</aside>
     <div class="foot"><span><b>FEEPASS</b> · BCH BLAZE 2026</span><span>v4 · 2026-11-21 · 5 / 7</span></div>
