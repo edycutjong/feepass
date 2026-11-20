@@ -94,7 +94,7 @@ Wallet compatibility is **unverified** for any named wallet until a human record
 
 | Metric | Value | Reproduce |
 |---|---|---|
-| Tests | **184 tests in 13 files** (vitest, offline; 183 run on a fresh clone, 1 checks the built bundle and runs after `npm run build`) | `npm test` |
+| Tests | **189 tests in 13 files** (vitest, offline; 188 run on a fresh clone, 1 checks the built bundle and runs after `npm run build`) | `npm test` |
 | Type check | `vue-tsc --noEmit`, 0 errors | `npm run typecheck` |
 | Mainnet guard | every provider in browser code is `'mainnet'`, asserted by a test | `test/mainnet-only.test.ts` |
 | Pre-broadcast check | the signed transaction is verified on the BCH 2026 VM before it is sent | `verifySignedTx` in `src/core/` |
@@ -120,7 +120,7 @@ Node 22 or newer. No wallet, key or network setup is needed to run the tests.
 ```bash
 git clone https://github.com/edycutjong/feepass && cd feepass
 npm install
-npm test        # 184 tests (183 run before the first build), offline
+npm test        # 189 tests (188 run before the first build), offline
 npm run dev     # the app, reading Bitcoin Cash mainnet
 ```
 
@@ -129,7 +129,7 @@ npm run dev     # the app, reading Bitcoin Cash mainnet
 Today the pool and the starter faucet are not funded: step 1 connects and shows your balances, step 2 answers "The faucet is out for now", and **Send** stops at "Pool not open yet".
 
 1. Open <https://feepass.edycu.dev> and press **Connect wallet**; approve in a WizardConnect wallet.
-2. No PUSD yet? Press **Get 0.25 starter PUSD** (one claim per address, 3 per UTC day; the starter faucet is not funded yet, check `/api/feepass?op=health`).
+2. No PUSD yet? Once the starter faucet is funded, **Get 0.25 starter PUSD** gives one claim per address (3 per UTC day). It is not funded yet (check `/api/feepass?op=health`), so for now bring a wallet that already holds PUSD.
 3. Enter a mainnet recipient and an amount, then **Send**. Approve the single signature request.
 4. The ticket shows what was sent, the fee you paid in PUSD, the lane that paid the miner fee, and your spendable BCH before and after.
 

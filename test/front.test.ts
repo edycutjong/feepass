@@ -13,6 +13,8 @@ import type { Board, Lane } from '../src/core/lanes';
 import SampleBooth from '../src/ui/SampleBooth.vue';
 import FrontPage from '../src/ui/FrontPage.vue';
 import LaneBoard from '../src/ui/LaneBoard.vue';
+import PoolPage from '../src/ui/PoolPage.vue';
+import { config } from '../src/core/config';
 
 const emptyBoard: Board = { lanes: [], otherCoins: 0, open: 0, poolSats: 0n, poolUnits: 0n };
 const props = { fee: '0.01', error: '', slots: 20, repoUrl: 'https://github.com/edycutjong/feepass' };
@@ -133,5 +135,14 @@ describe('FrontPage', () => {
     const w = mount(FrontPage, { props: { ...props, board: emptyBoard } });
     await w.get('[data-testid=hero-connect]').trigger('click');
     expect(w.emitted('connect')).toHaveLength(1);
+  });
+});
+
+describe('PoolPage', () => {
+  it('an unfunded pool reads "0 (none funded, N planned)", never a 0 / 0 that looks like a bug', () => {
+    const w = mount(PoolPage, { props: { cfg: config, board: emptyBoard, error: '', contractAddress: 'x', tokenAddress: 'y' } });
+    const kv = w.get('.kv').text();
+    expect(kv).toContain(`0 (none funded, ${config.lanes} planned)`);
+    expect(kv).not.toContain('0 / 0');
   });
 });

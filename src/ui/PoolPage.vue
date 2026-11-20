@@ -22,7 +22,7 @@ const lastTxs = computed(() => [...new Set((props.board?.lanes ?? []).map((l) =>
     <div class="panel">
       <h2>Totals</h2>
       <dl class="kv">
-        <div><dt>Lanes open</dt><dd class="data">{{ board ? `${board.open} / ${board.lanes.length}` : '—' }}</dd></div>
+        <div><dt>Lanes open</dt><dd class="data">{{ !board ? '—' : board.lanes.length ? `${board.open} / ${board.lanes.length}` : `0 (none funded, ${cfg.lanes} planned)` }}</dd></div>
         <div><dt>BCH in lanes</dt><dd class="data">{{ board ? (Number(board.poolSats) / 1e8).toFixed(8) : '—' }}</dd></div>
         <div><dt>PUSD fees earned</dt><dd class="data">{{ board ? formatUnits(earned) : '—' }} PUSD <small class="muted">(estimate: PUSD in the lanes shown minus the {{ formatUnits(LANE_SEED_UNITS) }} seed each lane starts with)</small></dd></div>
         <div v-if="board && board.otherCoins"><dt>Other coins</dt><dd>+{{ board.otherCoins }} other coins at the pool address</dd></div>
