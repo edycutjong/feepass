@@ -1,7 +1,7 @@
 <div align="center">
   <img src="docs/assets/icon.svg" alt="FeePass icon" width="144">
   <h1>FeePass 🎫</h1>
-  <p><em>Send PUSD on Bitcoin Cash with no spendable BCH: a covenant pays the network fee, and you pay it back in PUSD in the same transaction.</em></p>
+  <p><em>For anyone holding PUSD but no spendable BCH: a covenant pays the Bitcoin Cash network fee, and you pay it back in PUSD in the same transaction.</em></p>
   <img src="docs/assets/readme-hero-animated.svg" alt="Illustration of FeePass: a covenant pays the Bitcoin Cash network fee and you pay it back in PUSD. Lane 14 turns green and a sample ticket prints: fee paid in PUSD, no spendable BCH used." width="100%">
 
   <br/>
@@ -11,7 +11,7 @@
 
   <br/>
 
-  ![Bitcoin Cash](https://img.shields.io/badge/Bitcoin_Cash-mainnet-0AC18E?style=flat)
+  ![Bitcoin Cash](https://img.shields.io/badge/Bitcoin_Cash-mainnet_app-0AC18E?style=flat)
   ![CashScript](https://img.shields.io/badge/CashScript_0.14-1F4F9A?style=flat)
   ![Vue](https://img.shields.io/badge/Vue_3-42b883?style=flat&logo=vue.js&logoColor=white)
   ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
@@ -21,15 +21,15 @@
 
 ---
 
-> **Status:** the app is live at <https://feepass.edycu.dev> and one real sponsored send has run on chipnet (Bitcoin Cash's public test network, txid `78be2edf…f848c`). The **mainnet pool is not funded yet**, so on the live app you can connect and see your balances, and a send stops at "Pool not open yet". Details under Live Deployment.
+> **Status:** the app is live at <https://feepass.edycu.dev> and one real sponsored send has run on chipnet (Bitcoin Cash's public test network, [txid `78be2edf…f848c`](https://chipnet.imaginary.cash/tx/78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c)). The **mainnet pool is not funded yet**, so on the live app you can connect and see your balances, and a send stops at "Pool not open yet". Details under Live Deployment.
 
 ## 📸 See it in Action
 
 <p align="center">
-  <img src="docs/assets/devpost-gallery.png" alt="FeePass: the pool's lanes, one lane turning green, and a sample ticket" width="100%">
+  <img src="docs/assets/devpost-gallery.png" alt="Diagram of the one fixed-shape transaction: your PUSD coin and one pool lane in, three outputs, the 580-sat miner fee paid by the lane" width="100%">
 </p>
 
-The picture is an illustration: it shows open lanes and a **sample** ticket, not a recorded transaction. Live: <https://feepass.edycu.dev> (the pool page is `/pool`).
+The picture is a diagram of the transaction shape; "lane 14" is an example label, not a funded mainnet lane. Live: <https://feepass.edycu.dev> (the pool page is `/pool`).
 
 ## 💡 The Problem & Solution
 
@@ -70,15 +70,15 @@ The covenant's eight rules, what each prevents, and the failure model are in [do
 |---|---|---|
 | F1 | The sender pays the fee in dollars: exactly 0.01 PUSD returns to the pool (R5 is an equality, so no front end can overcharge through it) | covenant R5, `test/covenant.test.ts` |
 | F2 | Concurrent senders do not collide: 20 lanes by design, a random open lane per send, re-sign on `txn-mempool-conflict` (at most 2 re-signs) | `src/core/lanes.ts`, `test/flow.test.ts` |
-| F3 | Fixed transaction shape; the pool pays only the miner fee plus at most 675 sats of extras, and loses at most 2,000 sats per send | covenant R1, R4, R6 |
+| F3 | Fixed transaction shape; the pool pays only the miner fee plus at most 675 sats of dust top-up for the user's token outputs (R6), and loses at most 2,000 sats per send | covenant R1, R4, R6 |
 | F4 | The claim is "no spendable BCH", never "zero BCH" | copy in `src/ui/`, this file |
 | F5 | The covenant does not bind the recipient; the user's own signature does | [ARCHITECTURE §1](docs/ARCHITECTURE.md#what-the-covenant-does-not-check) |
 
 ## ⛓️ Live Deployment
 
-> **Status, stated plainly:** the app and the starter route are live at <https://feepass.edycu.dev>. The **mainnet pool is not funded yet**: the covenant address is derived from `src/config/mainnet.json` and shown on `/pool`, but no lane at it holds BCH, so there is **no mainnet FeePass txid** and the app shows "Pool not open yet". The starter faucet is empty too. Today a judge can connect a wallet and see balances; a send needs a funded lane. This section is updated, with explorer links, when the operator tools first run on mainnet; their txids are appended to `evidence/mainnet-txs.csv`.
+> **Status:** the app and the starter route are live at <https://feepass.edycu.dev>. The **mainnet pool is not funded yet**: the covenant address is derived from `src/config/mainnet.json` and shown on `/pool`, but no lane at it holds BCH, so there is **no mainnet FeePass txid** and the app shows "Pool not open yet". The starter faucet is empty too. Today a judge can connect a wallet and see balances; a send needs a funded lane. This section is updated, with explorer links, when the operator tools first run on mainnet; their txids are appended to `evidence/mainnet-txs.csv`.
 
-**On a real chain (chipnet, Bitcoin Cash's public test network):** one sponsored send, broadcast and read back on 2026-11-20 by [`scripts/chipnet-spike.ts`](scripts/chipnet-spike.ts) through the same builder and VM check the app uses. Txid `78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c`: 2 inputs (the user's token coin, one pool lane), 3 outputs, 572 bytes, 580 sats miner fee paid by the lane, exactly 1 fee unit back to the pool, user spendable BCH 0 before and 0 after. Chipnet has no PUSD, so a test token stands in for it, and a headless test key signs, not a named wallet. Record: [`evidence/chipnet-send.json`](evidence/chipnet-send.json), rows in [`evidence/chipnet-txs.csv`](evidence/chipnet-txs.csv).
+**On a real chain (chipnet, Bitcoin Cash's public test network):** one sponsored send, broadcast and read back on 2026-11-20 by [`scripts/chipnet-spike.ts`](scripts/chipnet-spike.ts) through the same builder and VM check the app uses. Txid [`78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c`](https://chipnet.imaginary.cash/tx/78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c) (chipnet explorer): 2 inputs (the user's token coin, one pool lane), 3 outputs, 572 bytes, 580 sats miner fee paid by the lane, exactly 1 fee unit back to the pool, user spendable BCH 0 before and 0 after. Chipnet has no PUSD, so a test token stands in for it, and a headless test key signs, not a named wallet. Record: [`evidence/chipnet-send.json`](evidence/chipnet-send.json), rows in [`evidence/chipnet-txs.csv`](evidence/chipnet-txs.csv).
 
 Verifiable offline, reproducible with `npm test`:
 
@@ -151,7 +151,7 @@ src/core/                    pure TypeScript: builder, send flow, lanes, config,
 src/ui/                      the Vue app (front page, send form, lane board, ticket)
 src/server/ + api/           the one serverless route (starter PUSD, pool health)
 scripts/                     operator tools: deploy, split into lanes, sweep, spike, measure
-evidence/                    offline measurements (mainnet txids appear here later)
+evidence/                    offline measurements and the chipnet send (mainnet txids appear here later)
 public/deck/                 the pitch deck (one HTML file, served at /deck/)
 docs/                        ARCHITECTURE.md, DX-REPORT.md, assets/
 test/                        13 test files
@@ -159,7 +159,7 @@ test/                        13 test files
 
 ## 💰 Business Model
 
-Wallets and merchants that onboard new users in PUSD want those users to transact on day one. The sender pays 0.01 PUSD per send; nobody pays a subscription. The public pool earns the spread: PUSD in, a little BCH out (per send at most 2,000 sats, 580 sats measured for the standard shape). A wallet can run its own lanes with the same MIT contract by changing constructor parameters, and keep its own fees. A cent per send is small money; the business is volume across wallets. A hosted-lanes service for wallets is unvalidated and not claimed.
+Wallets and merchants that onboard new users in PUSD want those users to transact on day one. The sender pays 0.01 PUSD per send; nobody pays a subscription. The public pool earns the spread: PUSD in, a little BCH out (per send at most 2,000 sats: the 580-sat miner fee when the user's coin covers its own dust, 882 sats in the chipnet run). A wallet can run its own lanes with the same MIT contract by changing constructor parameters, and keep its own fees. A cent per send is small money; the business is volume across wallets. A hosted-lanes service for wallets is unvalidated and not claimed.
 
 ## 📽️ Demo Materials
 

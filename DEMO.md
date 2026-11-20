@@ -1,6 +1,6 @@
 # FeePass: demo and reproduction
 
-Everything here can be run from a fresh clone. Nothing is a recording: each number names the command or file that produces it.
+Sections 1–3 run offline from a fresh clone; section 4 needs tBCH on a chipnet key and section 5 needs the funded mainnet pool. Each number names the command or file that produces it; recorded runs are in `evidence/`.
 
 ## Status
 
@@ -36,7 +36,7 @@ cat evidence/tx-shape.json
 | Fee the user pays | `params.feeTokens` | 1 base unit = 0.01 PUSD (2 decimals) |
 | Covenant size | `redeemScriptBytes` | 160 bytes |
 
-The relay run in section 3 used the exact 572-sat fee; the 580 here adds 8 bytes of ECDSA headroom. Recompute it: `npx tsx scripts/measure-shape.ts` (offline; compiles the covenant and serializes a signed send).
+The app and the chipnet send in section 4 pay 580 sats (572 bytes plus 8 bytes of ECDSA headroom); the relay run in section 3 used exactly 572. Recompute it: `npx tsx scripts/measure-shape.ts` (offline; compiles the covenant and serializes a signed send).
 
 ## 3. Check the wallet protocol (real relay, mock coins)
 
@@ -57,7 +57,7 @@ The script mints a test token standing in for PUSD (chipnet has no PUSD), seeds 
 | Figure | Value |
 |---|---|
 | Genesis txid | `204de942da7742dfb164a56ac224c8df5dccbc145ca1edee719ccff961f84990` |
-| Sponsored send txid | `78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c` |
+| Sponsored send txid | [`78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c`](https://chipnet.imaginary.cash/tx/78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c) |
 | Shape | 2 inputs, 3 outputs, 572 bytes |
 | Miner fee | 580 sats, paid by the lane |
 | Lane cost | 882 sats = 580 fee + 302 top-up (the user coin held 1,000 sats; two token outputs need 651 each) |

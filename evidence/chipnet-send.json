@@ -27,6 +27,7 @@
     "userSpendableBchAfter": 0,
     "sighash": "0x61"
   },
-  "readback": "both txids fetched back from a chipnet Fulcrum server with ElectrumNetworkProvider('chipnet') on 2026-11-20 after broadcast; outputs above are from that readback",
-  "rows": "evidence/chipnet-txs.csv"
+  "readback": "both txids fetched back from a chipnet Fulcrum server with ElectrumNetworkProvider('chipnet') on 2026-11-20 after broadcast; outputs above are from that readback; the explorer above showed it with 5 confirmations at 572 B, fee 580 sats, on 2026-11-20 20:40 UTC",
+  "rows": "evidence/chipnet-txs.csv",
+  "explorer": "https://chipnet.imaginary.cash/tx/78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c"
 }
