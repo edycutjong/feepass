@@ -23,7 +23,7 @@ export interface AppConfig {
 
 export class ConfigError extends Error {}
 
-/** Refuses to produce a config for anything but mainnet (architecture §9.3): the send form never renders without one. */
+/** Refuses to produce a config for anything but mainnet (docs/ARCHITECTURE.md §4): the send form never renders without one. */
 export function parseConfig(j: typeof raw): AppConfig {
   if (j.network !== 'mainnet') throw new ConfigError(`config network is "${j.network}", the app only runs on mainnet`);
   if (!/^[0-9a-f]{64}$/.test(j.pusdCategory)) throw new ConfigError('pusdCategory must be 32-byte display-order hex');

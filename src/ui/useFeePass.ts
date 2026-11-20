@@ -52,7 +52,7 @@ const utcStamp = () => new Date().toISOString().slice(0, 16).replace('T', ' ') +
 
 export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number } = {}) {
   const store = opts.store ?? localStore;
-  // Mainnet only: the provider is built with 'mainnet' and there is no network switch (architecture §9.2).
+  // Mainnet only: the provider is built with 'mainnet' and there is no network switch (docs/ARCHITECTURE.md §4).
   const provider = new ElectrumNetworkProvider('mainnet');
   const pool = appPool(config, provider);
   const poolLock = lockingBytecodeOf(pool.tokenAddress);
@@ -94,7 +94,7 @@ export function useFeePass(opts: { store?: PendingStore; signTimeoutMs?: number 
     }
   }
 
-  /** The board freezes while a ticket is shown, so the paid head stays green above it (ui.md S4). */
+  /** The board freezes while a ticket is shown, so the paid head stays green above it. */
   async function refreshBoard(force = false) {
     if (!force && sentTxid.value) return;
     try {

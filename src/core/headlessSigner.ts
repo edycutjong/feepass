@@ -1,5 +1,5 @@
 // A minimal conforming WizardConnect-style signer: signs the requested inputs of a WC transaction object with
-// SIGHASH_ALL | SIGHASH_FORKID | SIGHASH_UTXOS (0x61), Schnorr, P2PKH unlock. Used by tests and the automated F6 rig.
+// SIGHASH_ALL | SIGHASH_FORKID | SIGHASH_UTXOS (0x61), Schnorr, P2PKH unlock. Used by tests and the automated wallet-compatibility rig.
 // It proves our request is well-formed and signable by a conforming wallet; it does NOT prove Selene or Paytaca sign it.
 import {
   binToHex,

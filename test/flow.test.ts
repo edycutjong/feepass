@@ -1,5 +1,5 @@
 // End-to-end sponsored send on the mock chain: lane pick → build → conforming signer (sighash 0x61) → VM verify → broadcast →
-// ticket, plus every recovery branch of architecture §3 (F2 retry on txn-mempool-conflict, same in0 on every re-sign).
+// ticket, plus every recovery branch of docs/ARCHITECTURE.md §3 (F2 retry on txn-mempool-conflict, same in0 on every re-sign).
 import { describe, expect, it } from 'vitest';
 import { binToHex, decodeTransaction, encodeTransaction, hexToBin } from '@bitauth/libauth';
 import { signWcTransaction } from '../src/core/headlessSigner';

@@ -49,7 +49,7 @@ describe('parseRecipient (mainnet P2PKH only)', () => {
   });
 });
 
-describe('config (mainnet guard, architecture §9)', () => {
+describe('config (mainnet guard, docs/ARCHITECTURE.md §4)', () => {
   it('parses the committed config: mainnet, fee and caps from the constructor', () => {
     expect(config.network).toBe('mainnet');
     expect(config.params).toEqual(DEFAULT_PARAMS);

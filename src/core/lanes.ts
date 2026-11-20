@@ -16,7 +16,7 @@ export interface Lane {
 }
 
 export interface Board {
-  /** At most N heads: the N highest-value qualifying UTXOs (architecture §4 board rule). */
+  /** At most N heads: the N highest-value qualifying UTXOs. */
   lanes: Lane[];
   /** Coins at the pool address that are not on the board (token-less donations, NFTs, other categories, beyond N). */
   otherCoins: number;

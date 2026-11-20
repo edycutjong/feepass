@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Wallet-compatibility gate (F6). Connect a wallet over WizardConnect, find a real PUSD coin on mainnet, ask the wallet
+// Wallet-compatibility gate. Connect a wallet over WizardConnect, find a real PUSD coin on mainnet, ask the wallet
 // to sign shape (a) and shape (b), check what comes back, and produce a report to paste into the gate record.
 import { computed, onMounted, ref, watch } from 'vue';
 import { useWizardConnect, WizardConnectQRDialog } from '@paytaca/wizardconnect-vue';

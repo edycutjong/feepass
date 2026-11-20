@@ -1,5 +1,5 @@
 // The sponsored send, end to end: pick a lane → build the fixed shape → wallet signs input 0 → verify → broadcast → recover.
-// Recovery (architecture §3): every re-sign of one send keeps the SAME in0, so two versions of one payment conflict on the
+// Recovery (docs/ARCHITECTURE.md §3): every re-sign of one send keeps the SAME in0, so two versions of one payment conflict on the
 // user's coin and at most one can ever confirm. A lane conflict or script rejection excludes that lane and asks for one more
 // signature (max 2, then "Pool busy"). A missing lane parent is waited for (≤ 20 s) before moving on. If the user's own coin
 // is gone, the flow stops by name. A broadcast with no answer is "status unknown": the same bytes may be re-sent, never re-signed.
@@ -33,7 +33,7 @@ export class FlowError extends Error {
   }
 }
 
-/** One record in localStorage (architecture §4): written before the first broadcast, cleared when settled. */
+/** One record in localStorage (docs/ARCHITECTURE.md §3, step 7): written before the first broadcast, cleared when settled. */
 export interface PendingSend {
   in0: string;
   ownerAddress: string;
@@ -125,9 +125,9 @@ export interface FlowDeps {
   sleep?: (ms: number) => Promise<void>;
   now?: () => number;
   onEvent?: (e: FlowEvent) => void;
-  /** Extra signatures after the first, per send (ui.md: "after 2 re-signs: Pool busy"). */
+  /** Extra signatures after the first, per send (after 2 re-signs the UI says "Pool busy"). */
   maxResigns?: number;
-  /** How long to wait for an unconfirmed lane parent to reach the server (ui.md: up to 20 s). */
+  /** How long to wait for an unconfirmed lane parent to reach the server (up to 20 s). */
   laneWaitMs?: number;
 }
 

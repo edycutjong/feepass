@@ -4,7 +4,7 @@ import type { WcTransactionObject } from 'cashscript';
 
 export interface Ticket {
   txid: string;
-  /** "No spendable BCH used." only when the inputs are exactly the user's PUSD coin + one pool lane (ui.md S4). */
+  /** "No spendable BCH used." only when the inputs are exactly the user's PUSD coin + one pool lane. */
   headline: string | null;
   inputs: { userCoin: boolean; poolLane: boolean; count: number };
   recipient: string;

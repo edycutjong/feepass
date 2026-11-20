@@ -1,4 +1,4 @@
-// Protocol-level F6 check over the REAL WizardConnect relay: a headless wallet (@wizardconnect/wallet) connects to a
+// Protocol-level wallet-compatibility check over the REAL WizardConnect relay: a headless wallet (@wizardconnect/wallet) connects to a
 // dapp (@wizardconnect/dapp), shares its path xpubs, receives the shape-(a) sponsored-send request (covenant input in
 // sourceOutputs, user input in inputPaths), signs input 0 with sighash 0x61, and the dapp verifies the result.
 // The coins are mock (MockNetworkProvider evaluates the signed tx in the VM); the relay hop is real.

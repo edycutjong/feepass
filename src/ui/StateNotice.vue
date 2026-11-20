@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// One named notice per failure state (ui.md "States"): ink on paper, a red ✕ and the reason. No separate error red.
+// One named notice per failure state: ink on paper, a red ✕ and the reason. No separate error red.
 import type { Notice } from './useFeePass';
 defineProps<{ notice: Notice; canResend: boolean; busy?: boolean }>();
 defineEmits<{ resend: []; startOver: []; dismiss: [] }>();
