@@ -51,7 +51,7 @@ consensus, not the covenant, and R6 lets those two outputs carry unrelated recip
 pool pay more than `C` or receive less than `f`. Constructor parameters (`ownerPk`, PUSD category, f, C, T) are in `src/config/mainnet.json`;
 the pool address is derived from them in `src/core/pool.ts`, never typed.
 
-Measured shape: 572 bytes, 580 sats miner fee at the standard 1 sat/B plus 8 bytes ECDSA headroom (`evidence/tx-shape.json`).
+Measured shape: 572 bytes, serialized with a Schnorr signature; the 580-sat miner fee is the standard 1 sat/B plus 8 bytes of headroom for a wallet that signs with ECDSA instead (a DER signature is up to 8 bytes longer; `src/core/sponsoredSend.ts`) (`evidence/tx-shape.json`).
 
 ## 2. Where things live
 

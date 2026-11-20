@@ -84,7 +84,7 @@ Recorded measurements (`npm test` runs the covenant, builder and flow tests offl
 
 | Evidence | File |
 |---|---|
-| Shape measured from the compiled artifact: 572 bytes, 580 sats miner fee at the standard 1 sat/B plus 8 bytes ECDSA headroom, 2,000 sats hard cap per send | [`evidence/tx-shape.json`](evidence/tx-shape.json) |
+| Shape measured from the compiled artifact: 572 bytes (Schnorr signature), 580 sats miner fee = the standard 1 sat/B plus 8 bytes of headroom for an ECDSA-signing wallet, 2,000 sats hard cap per send | [`evidence/tx-shape.json`](evidence/tx-shape.json) |
 | WizardConnect round trip through the **real relay** with a headless conforming wallet: signed with sighash 0x61, accepted by the BCH VM (protocol-level; not a Selene or Paytaca result) | [`evidence/relay-roundtrip.json`](evidence/relay-roundtrip.json) |
 | Covenant compile output | [`evidence/compile.json`](evidence/compile.json) |
 
