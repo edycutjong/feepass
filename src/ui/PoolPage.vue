@@ -17,7 +17,7 @@ const lastTxs = computed(() => [...new Set((props.board?.lanes ?? []).map((l) =>
   <main class="wrap">
     <h1 class="display h">The pool</h1>
     <p class="muted">A CashScript covenant holding BCH in lanes ({{ board?.lanes.length ?? 0 }} funded, {{ cfg.lanes }} planned). Each sponsored send takes one lane, pays the miner fee
-      from it (at most {{ cfg.params.maxSubsidy }} sats per transaction) and must return the lane holding exactly {{ formatUnits(cfg.params.feeTokens) }} PUSD more than it had.</p>
+      (and any dust top-up) from it, at most {{ Number(cfg.params.maxSubsidy).toLocaleString('en-US') }} sats per transaction in total, and must return the lane holding exactly {{ formatUnits(cfg.params.feeTokens) }} PUSD more than it had.</p>
     <LaneBoard :board="board" :error="error" :active="null" :chosen="null" :slots="cfg.lanes" large />
     <div class="panel">
       <h2>Totals</h2>
@@ -51,7 +51,7 @@ const lastTxs = computed(() => [...new Set((props.board?.lanes ?? []).map((l) =>
         <div><dt>Covenant (P2SH32)</dt><dd class="data">{{ contractAddress }}</dd></div>
         <div><dt>Source</dt><dd><a :href="cfg.repoUrl + '/blob/main/contracts/FeePassPool.cash'" target="_blank" rel="noopener">contracts/FeePassPool.cash</a></dd></div>
         <div><dt>Artifact sha256</dt><dd class="data">{{ cfg.artifactSha256 }}</dd></div>
-        <div><dt>Rules</dt><dd>fee {{ formatUnits(cfg.params.feeTokens) }} PUSD · cap {{ cfg.params.maxSubsidy }} sats · top-up ≤ {{ cfg.params.maxTopUp }} sats</dd></div>
+        <div><dt>Rules</dt><dd>fee {{ formatUnits(cfg.params.feeTokens) }} PUSD · cap {{ Number(cfg.params.maxSubsidy).toLocaleString('en-US') }} sats · top-up ≤ {{ cfg.params.maxTopUp }} sats</dd></div>
       </dl>
     </div>
   </main>

@@ -65,11 +65,17 @@ describe('FrontPage', () => {
     const w = mount(FrontPage, { props: { ...props, board: emptyBoard } });
     expect(w.findAll('[data-testid=receipt-num]').map((n) => n.text())).toEqual(
       ['0.01', ...[measured.send.minerFeeSats, measured.maxSubsidySats, measured.send.signedSizeBytes].map((n) => n.toLocaleString('en-US'))]);
+    // The fee sits next to a Schnorr-sized tx: the label says the difference is ECDSA headroom, computed, not typed.
+    const headroom = measured.send.minerFeeSats - measured.send.signedSizeBytes;
+    expect(headroom).toBeGreaterThan(0);
+    expect(w.findAll('.receipt .lbl')[1]!.text()).toContain(`plus ${headroom} bytes of headroom for a wallet that signs with ECDSA`);
   });
   it('unfunded pool: says the pool is not open and shows the honest not-funded line; the sample disclosure is always there', () => {
     const w = mount(FrontPage, { props: { ...props, board: emptyBoard } });
     expect(w.get('[data-testid=front-status]').text()).toContain('The pool is not open yet.');
+    expect(w.get('[data-testid=front-status]').classes()).toContain('closed');
     expect(w.find('[data-testid=honest-pool]').exists()).toBe(true);
+    expect(w.text()).toContain('A send of the same fixed shape has run once'); // the chipnet run was the top-up case, not the sample
     expect(w.get('#live-h').text()).toBe('The pool, live from mainnet: not open yet');
     expect(w.text()).toContain('The ticket above is a sample');
     expect(w.get('[data-testid=testnet-proof]').attributes('href')).toMatch(/\/blob\/main\/DEMO\.md$/);
@@ -78,8 +84,7 @@ describe('FrontPage', () => {
     const w = mount(FrontPage, { props: { ...props, board: emptyBoard } });
     const faq = w.findAll('details').map((d) => d.text()).find((t) => t.includes('draining'))!;
     expect(faq).toContain(`${measured.send.minerFeeSats} sats for a standard send`);
-    expect(faq).toContain(String(measured.maxMeasuredSubsidySats));
-    expect(faq).toContain(`${measured.maxMeasuredSubsidySats} sats in the largest\n          measured case`.replace(/\n\s+/, ' '));
+    expect(faq.replace(/\s+/g, ' ')).toContain(`${measured.maxMeasuredSubsidySats} sats in the largest measured case`);
     expect(faq).toContain(`at most ${measured.maxTopUpSats} sats of top-up per send`);
     expect(faq).toContain('bounds each send, not the total');
   });
@@ -146,5 +151,7 @@ describe('PoolPage', () => {
     const kv = w.get('.kv').text();
     expect(kv).toContain(`0 (none funded, ${config.lanes} planned)`);
     expect(kv).not.toContain('0 / 0');
+    expect(w.text()).toContain(`cap ${Number(config.params.maxSubsidy).toLocaleString('en-US')} sats`);
+    expect(w.get('p.muted').text()).toContain('(and any dust top-up)');
   });
 });

@@ -119,7 +119,7 @@ onBeforeUnmount(() => { io?.disconnect(); cancelAnimationFrame(raf); });
 
       <div class="rules">
         <article class="rule r5">
-          <h3 class="display">Exactly {{ fee }} PUSD back</h3>
+          <h3 class="display">Exactly {{ fee }} PUSD more</h3>
           <p>The pool's side is an equality: the lane always comes back holding exactly {{ fee }} PUSD more than it had, never more, never less.</p>
           <div class="ledger" aria-label="The lane's PUSD before and after one send">
             <p><span class="k">in1</span><span>lane holds</span><b>n PUSD</b></p>
@@ -157,7 +157,7 @@ require(tx.outputs.length == 3);</code></pre>
           <li><strong>Not free, not gasless.</strong> You pay {{ fee }} PUSD per send. That is the fee, and the pool's revenue.</li>
           <li><strong>Not the recipient's guard.</strong> The covenant does not check who gets paid. Your own signature covers the outputs, as far as your wallet shows them.</li>
           <li><strong>Not a mainnet receipt.</strong> The ticket above is a sample: its figures are computed offline from the compiled covenant.<span
-            v-if="poolUnfunded && !error" data-testid="honest-pool"> The mainnet pool is not funded yet.</span> The same send has run once on
+            v-if="poolUnfunded && !error" data-testid="honest-pool"> The mainnet pool is not funded yet.</span> A send of the same fixed shape has run once on
             Bitcoin Cash's public test network, with a test token in place of PUSD (<a :href="blob('DEMO.md')" data-testid="testnet-proof">DEMO.md, section 4</a>).</li>
           <li><strong>Not bounded in total.</strong> The covenant caps what each send can take from a lane; many sends can still use lanes up, and the operator refills them.</li>
           <li><strong>Not verified on a named wallet yet.</strong> Wallet results are recorded on the <a href="/gate.html">wallet gate page</a> by a person holding the wallet.</li>
