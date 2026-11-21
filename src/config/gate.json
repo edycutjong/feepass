@@ -2,6 +2,11 @@
   "network": "mainnet",
   "categoryDisplay": "2469acc5afa4b10cb5b5c04afb89c3a3ffd61c5da9c01e26d00951cae2a02544",
   "ownerPk": "0371f22915afad18395dc51d840b3af9b59afb766a147b931aca83526da3913fda",
-  "lane": null,
+  "lane": {
+    "txid": "9d80b411ce736d775219d6ef7ff6dadf2c24032ceafaa9cdddbe097132197dee",
+    "vout": 0,
+    "satoshis": "100000",
+    "units": "1"
+  },
   "merchantAddress": "bitcoincash:zrqay9kcl8nygne9gldzwntcccrc863m4ggda4uvhe"
 }

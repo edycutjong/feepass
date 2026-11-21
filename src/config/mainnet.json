@@ -14,5 +14,8 @@
   "demoRecipient": "bitcoincash:zzyen2cp5plph8r5uax2qsd4s83u7x3rvylahpest0",
   "demoAmountUnits": "10",
   "repoUrl": "https://github.com/edycutjong/feepass",
-  "payoutAddress": "bitcoincash:zpxrc4x4mzw7my37rwt5a2sx77vc0f84gvescta8a2"
+  "payoutAddress": "bitcoincash:zpxrc4x4mzw7my37rwt5a2sx77vc0f84gvescta8a2",
+  "contractAddress": "bitcoincash:pd2qspagk8vt9e6qz4k3r2a50ns9jrchkh8ystkq6stdlh832a5v5urkjmyvp",
+  "tokenAddress": "bitcoincash:rd2qspagk8vt9e6qz4k3r2a50ns9jrchkh8ystkq6stdlh832a5v5ws2nz942",
+  "economicsCheckedAtBchUsd": 192.64
 }

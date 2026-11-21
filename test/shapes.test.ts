@@ -8,6 +8,7 @@ import { signWcTransaction } from '../src/core/headlessSigner';
 import { verifySignedTx, VerifyError } from '../src/core/wizard';
 import { lockingBytecodeOf } from '../src/core/dust';
 import { PUSD_CATEGORY_DISPLAY as CAT } from '../src/core/params';
+import gate from '../src/config/gate.json';
 
 const priv = sha256.hash(utf8ToBin('gate-shape-user'));
 const pub = secp256k1.derivePublicKeyCompressed(priv) as Uint8Array;
@@ -41,8 +42,8 @@ describe('gate shapes', () => {
     expect(() => verifySignedTx(hex, shape.request.proposed, lockingBytecodeOf(tokenAddress), 'all')).toThrow(/Input 1|input index 1|validate/);
   });
 
-  it('(a) without a configured lane is flagged as a synthetic pre-check', () => {
-    expect(shapeA(provider, coin, owner).synthetic).toBe(true);
+  it('(a) is a synthetic pre-check exactly when no mainnet lane is configured; (b) is always synthetic', () => {
+    expect(shapeA(provider, coin, owner).synthetic).toBe(gate.lane === null);
     expect(shapeB(provider, coin, owner).synthetic).toBe(true);
   });
 });
