@@ -1,3 +1,5 @@
 txid,kind,first_seen_utc,block_height,size_bytes,miner_fee_sats,pool_subsidy_sats,pusd_fee_units,user_spendable_before_sats,user_spendable_after_sats,lane_outpoint,running_total_sats,external
 b09afb943bb1ba9fc0b4d00d23748011d3f6d8aea2dc63588be0137be241fafd,prep,2026-11-21T11:30:47.819Z,,219,300,,,,,,200300,false
 9d80b411ce736d775219d6ef7ff6dadf2c24032ceafaa9cdddbe097132197dee,split,2026-11-21T11:35:44.701Z,,615,617,,,,,9d80b411ce736d775219d6ef7ff6dadf2c24032ceafaa9cdddbe097132197dee:0,300917,false
+7c0b37c3e5c863987ef17fd508f686ba2ebd1211519e5a07d02d8717349b7f55,prep,2026-11-21T12:06:02.916Z,,464,600,,,,,,302517,false
+d59f120b5852280d98d6a84379c08e5b3cc11015a9c0f637e60577884aa6f8b7,send,2026-11-21T12:06:13.165Z,,572,580,882,1,0,0,9d80b411ce736d775219d6ef7ff6dadf2c24032ceafaa9cdddbe097132197dee:0,302517,false

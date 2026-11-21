@@ -1,0 +1,19 @@
+{
+  "network": "mainnet",
+  "recordedAtUtc": "2026-11-21T12:06:13.165Z",
+  "sponsoredTxid": "d59f120b5852280d98d6a84379c08e5b3cc11015a9c0f637e60577884aa6f8b7",
+  "explorer": "https://bchexplorer.info/tx/d59f120b5852280d98d6a84379c08e5b3cc11015a9c0f637e60577884aa6f8b7",
+  "signer": "headless test key (scripts/mainnet-send.ts), not a named wallet",
+  "pool": "bitcoincash:rd2qspagk8vt9e6qz4k3r2a50ns9jrchkh8ystkq6stdlh832a5v5ws2nz942",
+  "lane": "9d80b411ce736d775219d6ef7ff6dadf2c24032ceafaa9cdddbe097132197dee:0",
+  "recipient": "bitcoincash:zzyen2cp5plph8r5uax2qsd4s83u7x3rvylahpest0",
+  "sentPusd": "0.10",
+  "feePusd": "0.01",
+  "sizeBytes": 572,
+  "minerFeeSats": 580,
+  "poolSubsidySats": 882,
+  "sighash": "0x61",
+  "userSpendableBchBefore": 0,
+  "userSpendableBchAfter": 0,
+  "userPusdUnitsAfter": 9
+}
