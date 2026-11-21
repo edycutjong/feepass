@@ -8,6 +8,7 @@ const version = __APP_VERSION__;
     <div class="inner">
       <a class="brand display" href="/">FeePass</a>
       <nav class="links" aria-label="Footer">
+        <a href="/judge/">For judges</a>
         <a href="/deck/">Pitch deck</a>
         <a :href="repoUrl" target="_blank" rel="noopener">Source</a>
         <a :href="repoUrl + '/blob/main/contracts/FeePassPool.cash'" target="_blank" rel="noopener">Covenant</a>

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 for (const width of [375, 768, 1440]) {
-  for (const path of ['/', '/pool']) {
+  for (const path of ['/', '/pool', '/judge/']) {
     test(`no horizontal overflow on ${path} at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(path);

@@ -7,6 +7,7 @@
   <br/>
 
   [![Live App](https://img.shields.io/badge/🚀_Live-App-1F4F9A?style=for-the-badge)](https://feepass.edycu.dev)
+  [![For Judges](https://img.shields.io/badge/⚖️_For-Judges-1E9E5A?style=for-the-badge)](https://feepass.edycu.dev/judge/)
   [![Pitch Deck](https://img.shields.io/badge/📊_Pitch-Deck-f59e0b?style=for-the-badge)](https://feepass.edycu.dev/deck/)
   [![Built for BCH BLAZE 2026](https://img.shields.io/badge/DoraHacks-BCH_BLAZE_2026-8b5cf6?style=for-the-badge)](https://dorahacks.io/hackathon/bchblaze2026/detail)
 

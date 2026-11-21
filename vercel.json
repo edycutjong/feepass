@@ -1,4 +1,17 @@
 {
-  "rewrites": [{ "source": "/pool", "destination": "/index.html" }],
-  "functions": { "api/feepass.mjs": { "maxDuration": 30 } }
+  "rewrites": [
+    {
+      "source": "/pool",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/judge",
+      "destination": "/judge/index.html"
+    }
+  ],
+  "functions": {
+    "api/feepass.mjs": {
+      "maxDuration": 30
+    }
+  }
 }
