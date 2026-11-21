@@ -15,8 +15,7 @@ const version = __APP_VERSION__;
         <a href="/pool">Pool</a>
         <a href="/gate.html">Wallet gate</a>
         <a class="rel" :href="repoUrl + '/releases/tag/' + version" target="_blank" rel="noopener" :aria-label="'Release ' + version">
-          <img :src="'https://img.shields.io/github/v/release/edycutjong/feepass?sort=semver&style=flat&label=release&color=0AC18E'" alt="" width="104" height="20" loading="lazy">
-          <span class="data">{{ version }}</span>
+          <span class="data">Release {{ version }}</span>
         </a>
       </nav>
       <p class="addr" title="CashTokens address for BCH BLAZE Community Choice: send EMBER2026 tokens here to vote"><span class="addr-l">Community Choice · send EMBER2026 votes to</span> <span class="data">{{ payout }}</span></p>
@@ -35,7 +34,6 @@ const version = __APP_VERSION__;
 .links a { color: var(--sign-ink); font-size: 16px; min-height: 44px; display: inline-flex; align-items: center; text-underline-offset: 3px; }
 .links a:hover { text-decoration-thickness: 2px; opacity: .85; }
 .rel { gap: 8px; text-decoration: none; }
-.rel img { display: block; height: 20px; width: auto; }
 .rel .data { font-size: 14px; }
 .addr { grid-column: 1 / -1; margin: 10px 0 0; overflow-wrap: anywhere; }
 .addr-l { font: 600 14px/1.4 var(--font-body); color: #B7CBEC; margin-right: 6px; }
