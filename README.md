@@ -12,6 +12,8 @@
   [![Pitch Deck](https://img.shields.io/badge/📊_Pitch-Deck-f59e0b?style=for-the-badge)](https://feepass.edycu.dev/deck/)
   [![BLAZE Presentation](https://img.shields.io/badge/📑_BLAZE-Presentation-fbbc04?style=for-the-badge)](https://docs.google.com/presentation/d/1cqIM2GuEVrLRrAz3gNQu9_Uvzr4C1IgKN67-z_rSNao/edit?usp=sharing)
   [![Built for BCH BLAZE 2026](https://img.shields.io/badge/DoraHacks-BCH_BLAZE_2026-8b5cf6?style=for-the-badge)](https://dorahacks.io/hackathon/bchblaze2026/detail)
+  [![DoraHacks BUIDL](https://img.shields.io/badge/DoraHacks-BUIDL_51513-ff6b00?style=for-the-badge)](https://dorahacks.io/buidl/51513)
+  [![Track](https://img.shields.io/badge/Track-Mainnet_Track-0AC18E?style=for-the-badge)](https://dorahacks.io/hackathon/bchblaze2026/detail)
 
   <br/>
 
