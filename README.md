@@ -8,6 +8,7 @@
 
   [![Live App](https://img.shields.io/badge/🚀_Live-App-1F4F9A?style=for-the-badge)](https://feepass.edycu.dev)
   [![For Judges](https://img.shields.io/badge/⚖️_For-Judges-1E9E5A?style=for-the-badge)](https://feepass.edycu.dev/judge/)
+  [![Demo Video](https://img.shields.io/badge/🎬_Demo-Video-ef4444?style=for-the-badge)](https://youtu.be/-S5u7nPyUrQ)
   [![Pitch Deck](https://img.shields.io/badge/📊_Pitch-Deck-f59e0b?style=for-the-badge)](https://feepass.edycu.dev/deck/)
   [![Built for BCH BLAZE 2026](https://img.shields.io/badge/DoraHacks-BCH_BLAZE_2026-8b5cf6?style=for-the-badge)](https://dorahacks.io/hackathon/bchblaze2026/detail)
 
@@ -191,7 +192,7 @@ Wallets and merchants that onboard new users in PUSD want those users to transac
 
 ## 📽️ Demo Materials
 
-Live app: <https://feepass.edycu.dev> · For judges: <https://feepass.edycu.dev/judge/> · BCH BLAZE presentation (Widget Factory template): [Google Slides](https://docs.google.com/presentation/d/1cqIM2GuEVrLRrAz3gNQu9_Uvzr4C1IgKN67-z_rSNao/edit?usp=sharing) · Pitch deck (web): <https://feepass.edycu.dev/deck/> (arrow keys, N for notes) · How to reproduce every number: [DEMO.md](DEMO.md).
+Demo video (2 min): <https://youtu.be/-S5u7nPyUrQ> · Live app: <https://feepass.edycu.dev> · For judges: <https://feepass.edycu.dev/judge/> · BCH BLAZE presentation (Widget Factory template): [Google Slides](https://docs.google.com/presentation/d/1cqIM2GuEVrLRrAz3gNQu9_Uvzr4C1IgKN67-z_rSNao/edit?usp=sharing) · Pitch deck (web): <https://feepass.edycu.dev/deck/> (arrow keys, N for notes) · How to reproduce every number: [DEMO.md](DEMO.md).
 
 ## 🤖 How this was built
 

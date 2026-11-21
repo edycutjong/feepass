@@ -40,4 +40,4 @@ npx tsx scripts/mainnet-send.ts --network mainnet --authorized-cap <bch>        
 
 ## Links
 
-[Live app](https://feepass.edycu.dev) · [Pool board](https://feepass.edycu.dev/pool) · [Pitch deck](https://feepass.edycu.dev/deck/) · [Widget Factory presentation](https://docs.google.com/presentation/d/1cqIM2GuEVrLRrAz3gNQu9_Uvzr4C1IgKN67-z_rSNao/edit?usp=sharing) · [README](README.md) · [Architecture](docs/ARCHITECTURE.md)
+[Demo video (2 min)](https://youtu.be/-S5u7nPyUrQ) · [Live app](https://feepass.edycu.dev) · [Pool board](https://feepass.edycu.dev/pool) · [Pitch deck](https://feepass.edycu.dev/deck/) · [Widget Factory presentation](https://docs.google.com/presentation/d/1cqIM2GuEVrLRrAz3gNQu9_Uvzr4C1IgKN67-z_rSNao/edit?usp=sharing) · [README](README.md) · [Architecture](docs/ARCHITECTURE.md)
