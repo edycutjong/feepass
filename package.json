@@ -32,7 +32,7 @@
   "devDependencies": {
     "@types/node": "^26.6.6",
     "@vitejs/plugin-vue": "^6.0.11",
-    "@vue/test-utils": "^2.5.1",
+    "@vue/test-utils": "^2.6.0",
     "@wizardconnect/wallet": "^0.2.4",
     "cashc": "^0.14.0",
     "esbuild": "^0.28.2",
