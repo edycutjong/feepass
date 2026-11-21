@@ -14,6 +14,8 @@
   [![Built for BCH BLAZE 2026](https://img.shields.io/badge/DoraHacks-BCH_BLAZE_2026-8b5cf6?style=for-the-badge)](https://dorahacks.io/hackathon/bchblaze2026/detail)
   [![DoraHacks BUIDL](https://img.shields.io/badge/DoraHacks-BUIDL_51513-ff6b00?style=for-the-badge)](https://dorahacks.io/buidl/51513)
   [![Track](https://img.shields.io/badge/Track-Mainnet_Track-0AC18E?style=for-the-badge)](https://dorahacks.io/hackathon/bchblaze2026/detail)
+  [![Read on dev.to](https://img.shields.io/badge/dev.to-Read_the_write--up-0A0A0A?style=for-the-badge&logo=devdotto&logoColor=white)](https://dev.to/edycutjong/a-bitcoin-cash-covenant-that-pays-your-network-fee-and-why-you-pay-it-back-in-dollars-3h5f)
+  [![Thread on X](https://img.shields.io/badge/X-Thread-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/edycutjong/status/2124150978891108367)
 
   <br/>
 
@@ -195,7 +197,7 @@ Wallets and merchants that onboard new users in PUSD want those users to transac
 
 ## 📽️ Demo Materials
 
-Demo video (2 min): <https://youtu.be/-S5u7nPyUrQ> · 60-second explainer (Media Track): <https://youtube.com/shorts/J3wPwHng_fI> · Live app: <https://feepass.edycu.dev> · For judges: <https://feepass.edycu.dev/judge/> · BCH BLAZE presentation (Widget Factory template): [Google Slides](https://docs.google.com/presentation/d/1cqIM2GuEVrLRrAz3gNQu9_Uvzr4C1IgKN67-z_rSNao/edit?usp=sharing) · Pitch deck (web): <https://feepass.edycu.dev/deck/> (arrow keys, N for notes) · How to reproduce every number: [DEMO.md](DEMO.md).
+Demo video (2 min): <https://youtu.be/-S5u7nPyUrQ> · Write-up on dev.to: <https://dev.to/edycutjong/a-bitcoin-cash-covenant-that-pays-your-network-fee-and-why-you-pay-it-back-in-dollars-3h5f> · X thread: <https://x.com/edycutjong/status/2124150978891108367> · 60-second explainer (Media Track): <https://youtube.com/shorts/J3wPwHng_fI> · Live app: <https://feepass.edycu.dev> · For judges: <https://feepass.edycu.dev/judge/> · BCH BLAZE presentation (Widget Factory template): [Google Slides](https://docs.google.com/presentation/d/1cqIM2GuEVrLRrAz3gNQu9_Uvzr4C1IgKN67-z_rSNao/edit?usp=sharing) · Pitch deck (web): <https://feepass.edycu.dev/deck/> (arrow keys, N for notes) · How to reproduce every number: [DEMO.md](DEMO.md).
 
 ## 🤖 How this was built
 
