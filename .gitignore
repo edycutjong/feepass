@@ -7,3 +7,10 @@ coverage/
 .DS_Store
 *.local
 .vercel
+
+# Playwright / Lighthouse
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+.lighthouseci/

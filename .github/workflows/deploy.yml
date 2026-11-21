@@ -1,0 +1,48 @@
+name: Deploy
+
+# Vercel production deploy recorded as a GitHub Deployment (environment "production"),
+# after Release has tagged the commit so the app's footer shows the released version.
+on:
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  production:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://feepass.edycu.dev
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx --yes vercel@latest pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      - run: npx --yes vercel@latest build --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - run: npx --yes vercel@latest deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Smoke test the live site
+        run: |
+          for p in / /pool /gate.html /deck/ "/api/feepass?op=health"; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "https://feepass.edycu.dev$p")
+            echo "$code $p" | tee -a "$GITHUB_STEP_SUMMARY"
+            [ "$code" = 200 ] || exit 1
+          done
