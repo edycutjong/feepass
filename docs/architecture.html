@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FeePass Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Condensed:wght@800&family=Public+Sans:wght@400;600;700&family=Sometype+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #EEF0EB; --paper: #FBFBF7; --ink: #16202B; --muted: #5E6670; --sign: #1F4F9A; --sign-ink: #FFFFFF;
+    --sign-dim: #B7CBEC; --housing: #111418; --after: #1E9E5A; --rule: #CDD2CA;
+  }
+  html, body { margin: 0; background: var(--bg); }
+  .wrap { overflow-x: auto; padding: 0; }
+  svg.fig { display: block; width: 1200px; min-width: 1200px; height: auto; margin: 0 auto; }
+  .fig text { font-family: "Public Sans", "Helvetica Neue", Arial, sans-serif; fill: var(--ink); }
+  .fig .d { font-family: "Encode Sans Condensed", "Arial Narrow", sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; }
+  .fig .m { font-family: "Sometype Mono", ui-monospace, Menlo, monospace; }
+  .fig .lbl { font-family: "Sometype Mono", ui-monospace, Menlo, monospace; font-size: 14px; font-weight: 600; letter-spacing: .04em; fill: var(--muted); }
+  .fig .mu { fill: var(--muted); }
+  .fig .w { fill: var(--sign-ink); }
+  .fig .wd { fill: var(--sign-dim); }
+  .fig .g { fill: var(--after); }
+  .node { fill: var(--paper); stroke: var(--ink); stroke-width: 2; }
+  .wire { fill: none; stroke: var(--ink); stroke-width: 2; }
+  .wire.ret { stroke: var(--muted); stroke-dasharray: 6 5; }
+  .wire.pay { stroke: var(--after); stroke-width: 3.5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<svg class="fig" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1444" width="1200" height="1444" role="img" aria-labelledby="architecture-title architecture-desc">
+  <title id="architecture-title">FeePass architecture: one sponsored transaction</title>
+  <desc id="architecture-desc">The browser app builds a fixed two-input, three-output Bitcoin Cash transaction from the user's PUSD coin and one covenant pool lane, the user's wallet signs only its own input over WizardConnect, the app verifies it on the BCH VM and broadcasts via Fulcrum; the covenant pays the 580-sat miner fee and requires exactly 0.01 PUSD back to the pool, and the operator funds lanes with split and sweep scripts; one mainnet lane is funded today, 20 is the design target.</desc>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#16202B"/></marker>
+    <marker id="ahm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5E6670"/></marker>
+    <marker id="ahg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1E9E5A"/></marker>
+  </defs>
+
+  <rect width="1200" height="1444" fill="#EEF0EB"/>
+
+  <!-- ===== Header sign plate ===== -->
+  <rect x="24" y="24" width="1152" height="104" rx="8" fill="#1F4F9A"/>
+  <rect x="32" y="32" width="1136" height="88" rx="5" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="56" y="84" class="d w" font-size="44">FeePass</text>
+  <text x="256" y="70" class="w" font-size="18" font-weight="600">Send PUSD on Bitcoin Cash with no spendable BCH.</text>
+  <text x="256" y="96" class="wd" font-size="17">A covenant pool pays the miner fee in sats; the sender pays it back as exactly 0.01 PUSD.</text>
+  <text x="1144" y="84" class="d wd" font-size="22" text-anchor="end">Architecture</text>
+
+  <!-- ===== Zone 1: off-chain ===== -->
+  <text x="40" y="168" class="d" font-size="20">1 · Off-chain: the app builds, your wallet signs one input</text>
+
+  <!-- wires zone 1 (drawn before nodes) -->
+  <path d="M470,224 H302" class="wire" marker-end="url(#ah)"/>
+  <rect x="331" y="200" width="110" height="16" fill="#EEF0EB"/>
+  <text x="386" y="212" class="lbl" text-anchor="middle">SIGN IN0</text>
+  <path d="M300,264 H468" class="wire ret" marker-end="url(#ahm)"/>
+  <rect x="331" y="240" width="110" height="16" fill="#EEF0EB"/>
+  <text x="386" y="252" class="lbl" text-anchor="middle">SIGNED TX</text>
+
+  <path d="M790,224 H938" class="wire" marker-end="url(#ah)"/>
+  <rect x="809" y="200" width="110" height="16" fill="#EEF0EB"/>
+  <text x="864" y="212" class="lbl" text-anchor="middle">BROADCAST</text>
+  <path d="M940,264 H792" class="wire ret" marker-end="url(#ahm)"/>
+  <rect x="799" y="240" width="130" height="16" fill="#EEF0EB"/>
+  <text x="864" y="252" class="lbl" text-anchor="middle">LANES · COINS</text>
+
+  <path d="M630,364 V310" class="wire" marker-end="url(#ah)"/>
+  <rect x="642" y="330" width="62" height="16" fill="#EEF0EB"/>
+  <text x="646" y="342" class="lbl">SERVES</text>
+
+  <path d="M790,404 H1002 Q1010,404 1010,396 V310" class="wire" marker-end="url(#ah)"/>
+  <rect x="836" y="380" width="128" height="16" fill="#EEF0EB"/>
+  <text x="900" y="392" class="lbl" text-anchor="middle">STARTER CLAIM</text>
+
+  <path d="M1100,308 V530" class="wire" marker-end="url(#ah)"/>
+  <rect x="1112" y="406" width="64" height="16" fill="#EEF0EB"/>
+  <text x="1116" y="418" class="lbl">MAINNET</text>
+
+  <!-- nodes zone 1 -->
+  <rect x="40" y="188" width="260" height="120" rx="6" class="node"/>
+  <text x="60" y="222" class="d" font-size="24">Your wallet</text>
+  <text x="60" y="250" font-size="16">any WizardConnect wallet;</text>
+  <text x="60" y="272" font-size="16">signs only its own input</text>
+  <text x="60" y="296" class="m mu" font-size="14">sighash 0x61</text>
+
+  <rect x="470" y="188" width="320" height="120" rx="6" class="node" stroke-width="2.5"/>
+  <text x="490" y="222" class="d" font-size="24">FeePass app</text>
+  <text x="490" y="250" font-size="16">runs in your browser: builds the tx,</text>
+  <text x="490" y="272" font-size="16">checks the signed tx on the BCH VM</text>
+  <text x="490" y="296" class="m mu" font-size="14">buildSponsoredSend · verifySignedTx</text>
+
+  <rect x="940" y="188" width="220" height="120" rx="6" class="node"/>
+  <text x="960" y="222" class="d" font-size="24">Fulcrum</text>
+  <text x="960" y="250" font-size="16">Electrum server</text>
+  <text x="960" y="272" font-size="16">mainnet only</text>
+  <text x="960" y="296" class="m mu" font-size="14">reads UTXOs · relays</text>
+
+  <rect x="470" y="364" width="320" height="88" rx="6" class="node"/>
+  <text x="490" y="396" class="d" font-size="22">Vercel</text>
+  <text x="584" y="396" font-size="16">static app + one function</text>
+  <text x="490" y="424" class="m mu" font-size="14">api/feepass.mjs · op=health</text>
+  <text x="490" y="442" class="m mu" font-size="14">op=starter: 0.25 PUSD, 3 claims/day</text>
+
+  <!-- ===== Zone 2: the one transaction (hero) ===== -->
+  <text x="40" y="510" class="d" font-size="20">2 · On-chain: one fixed-shape transaction</text>
+
+  <rect x="40" y="532" width="1120" height="420" rx="8" fill="#FBFBF7" stroke="#16202B" stroke-width="3"/>
+  <path d="M40,588 V540 Q40,532 48,532 H1152 Q1160,532 1160,540 V588 Z" fill="#1F4F9A"/>
+  <text x="64" y="571" class="d w" font-size="28">The one transaction</text>
+  <text x="1136" y="569" class="m wd" font-size="16" text-anchor="end">2 inputs · 3 outputs · 572 bytes · 580 sats miner fee</text>
+
+  <!-- wires inside the transaction -->
+  <path d="M344,668 H402" class="wire" marker-end="url(#ah)"/>
+  <path d="M344,820 H402" class="wire" marker-end="url(#ah)"/>
+  <path d="M800,648 H854" class="wire" marker-end="url(#ah)"/>
+  <path d="M800,748 H854" class="wire" marker-end="url(#ah)"/>
+  <path d="M800,850 H850" class="wire pay" marker-end="url(#ahg)"/>
+  <path d="M600,888 V914 Q600,922 608,922 H660" class="wire ret" marker-end="url(#ahm)"/>
+
+  <!-- inputs -->
+  <rect x="64" y="612" width="280" height="112" rx="6" class="node"/>
+  <text x="84" y="644" class="m mu" font-size="14" font-weight="600">in0</text>
+  <text x="122" y="645" class="d" font-size="22">Your PUSD coin</text>
+  <text x="84" y="672" font-size="16">P2PKH, signed by your wallet</text>
+  <text x="84" y="696" font-size="16">no spendable BCH needed</text>
+
+  <rect x="64" y="764" width="280" height="112" rx="6" class="node"/>
+  <text x="84" y="796" class="m mu" font-size="14" font-weight="600">in1</text>
+  <text x="122" y="797" class="d" font-size="22">One pool lane</text>
+  <text x="84" y="824" font-size="16">FeePassPool covenant UTXO</text>
+  <text x="84" y="852" class="m mu" font-size="14">sponsorPaid() · no signature</text>
+
+  <!-- covenant checks -->
+  <rect x="404" y="612" width="396" height="276" rx="6" fill="#111418"/>
+  <text x="424" y="642" class="d w" font-size="19">Covenant checks</text>
+  <text x="780" y="642" class="m wd" font-size="13" text-anchor="end">FeePassPool.cash</text>
+  <line x1="424" y1="654" x2="780" y2="654" stroke="#FFFFFF" stroke-opacity=".18"/>
+  <g class="m" font-size="16">
+    <text x="424" y="680" class="w"><tspan class="wd">R1</tspan> 2 in · 3 out · lane is in1</text>
+    <text x="424" y="706" class="w"><tspan class="wd">R7</tspan> the lane holds PUSD</text>
+    <text x="424" y="732" class="w"><tspan class="wd">R2</tspan> in0 and out0 carry PUSD</text>
+    <text x="424" y="758" class="w"><tspan class="wd">R8</tspan> out1 (change) carries PUSD</text>
+    <text x="424" y="784" class="w"><tspan class="wd">R3</tspan> out2 = the same covenant</text>
+    <text x="424" y="810" class="w"><tspan class="wd">R4</tspan> lane loses ≤ 2,000 sats</text>
+    <rect x="416" y="818" width="372" height="26" rx="3" fill="#1E9E5A"/>
+    <text x="424" y="836" font-weight="700" style="fill:#111418">R5 out2 PUSD = in1 + exactly 0.01</text>
+    <text x="424" y="868" class="w"><tspan class="wd">R6</tspan> user outputs ≤ in0 + 675 sats</text>
+  </g>
+
+  <!-- outputs -->
+  <rect x="856" y="612" width="280" height="72" rx="6" class="node"/>
+  <text x="876" y="642" class="m mu" font-size="14" font-weight="600">out0</text>
+  <text x="922" y="643" class="d" font-size="20">PUSD → recipient</text>
+  <text x="876" y="668" font-size="16">P2PKH with tokens</text>
+
+  <rect x="856" y="712" width="280" height="72" rx="6" class="node"/>
+  <text x="876" y="742" class="m mu" font-size="14" font-weight="600">out1</text>
+  <text x="922" y="743" class="d" font-size="20">PUSD change → you</text>
+  <text x="876" y="768" font-size="16">P2PKH with tokens</text>
+
+  <rect x="856" y="804" width="280" height="96" rx="6" fill="#FBFBF7" stroke="#1E9E5A" stroke-width="3"/>
+  <text x="876" y="834" class="m mu" font-size="14" font-weight="600">out2</text>
+  <text x="922" y="835" class="d" font-size="20">Lane back to pool</text>
+  <text x="876" y="860" font-size="16">minus the miner fee,</text>
+  <text x="876" y="884" font-size="16" font-weight="700" class="g">plus exactly 0.01 PUSD</text>
+
+  <!-- footer of the transaction -->
+  <text x="670" y="927" font-size="16"><tspan class="m" font-weight="600">580 sats</tspan> to miners, from the lane's BCH</text>
+  <text x="128" y="924" class="mu" font-size="14">out0 and out1 are bound by your own</text>
+  <text x="128" y="942" class="mu" font-size="14">signature, not by the covenant</text>
+
+  <!-- wires between transaction and pool -->
+  <path d="M106,1032 V878" class="wire" marker-end="url(#ah)"/>
+  <rect x="118" y="976" width="112" height="16" fill="#EEF0EB"/>
+  <text x="122" y="988" class="lbl">RANDOM LANE</text>
+
+  <path d="M1100,902 V1030" class="wire pay" marker-end="url(#ahg)"/>
+  <rect x="984" y="976" width="106" height="16" fill="#EEF0EB"/>
+  <text x="1088" y="988" class="lbl g" text-anchor="end" style="fill:#1E9E5A">+0.01 PUSD</text>
+
+  <!-- ===== Zone 3: the pool ===== -->
+  <path d="M500,1236 V1182" class="wire" marker-end="url(#ah)"/>
+  <rect x="512" y="1200" width="56" height="16" fill="#EEF0EB"/>
+  <text x="516" y="1212" class="lbl">SPLIT</text>
+  <path d="M700,1182 V1234" class="wire ret" marker-end="url(#ahm)"/>
+  <rect x="712" y="1200" width="56" height="16" fill="#EEF0EB"/>
+  <text x="716" y="1212" class="lbl">SWEEP</text>
+
+  <!-- lane board -->
+  <rect x="40" y="1032" width="1120" height="148" rx="8" fill="#1F4F9A"/>
+  <rect x="48" y="1040" width="1104" height="132" rx="5" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="72" y="1076" class="d w" font-size="26">Pool lanes · mainnet</text>
+  <text x="1128" y="1074" class="m wd" font-size="14" text-anchor="end">open while a lane holds ≥ 2,000 sats + its token dust</text>
+
+  <!-- signal heads: 1 funded (open), 19 design-target slots (not funded) -->
+  <g>
+    <rect x="86" y="1092" width="40" height="40" rx="4" fill="#111418"/>
+    <path d="M106,1100 V1122 M97,1114 L106,1123 L115,1114" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g fill="none" stroke="#B7CBEC" stroke-width="1.5" stroke-dasharray="4 3" stroke-opacity=".75">
+    <rect x="139" y="1093" width="38" height="38" rx="4"/><rect x="191" y="1093" width="38" height="38" rx="4"/>
+    <rect x="243" y="1093" width="38" height="38" rx="4"/><rect x="295" y="1093" width="38" height="38" rx="4"/>
+    <rect x="347" y="1093" width="38" height="38" rx="4"/><rect x="399" y="1093" width="38" height="38" rx="4"/>
+    <rect x="451" y="1093" width="38" height="38" rx="4"/><rect x="503" y="1093" width="38" height="38" rx="4"/>
+    <rect x="555" y="1093" width="38" height="38" rx="4"/><rect x="607" y="1093" width="38" height="38" rx="4"/>
+    <rect x="659" y="1093" width="38" height="38" rx="4"/><rect x="711" y="1093" width="38" height="38" rx="4"/>
+    <rect x="763" y="1093" width="38" height="38" rx="4"/><rect x="815" y="1093" width="38" height="38" rx="4"/>
+    <rect x="867" y="1093" width="38" height="38" rx="4"/><rect x="919" y="1093" width="38" height="38" rx="4"/>
+    <rect x="971" y="1093" width="38" height="38" rx="4"/><rect x="1023" y="1093" width="38" height="38" rx="4"/>
+    <rect x="1075" y="1093" width="38" height="38" rx="4"/>
+  </g>
+  <text x="106" y="1158" class="d w" font-size="16" text-anchor="middle">Open</text>
+  <path d="M140,1142 V1148 H1112 V1142" fill="none" stroke="#B7CBEC" stroke-width="1.5"/>
+  <text x="626" y="1166" class="wd" font-size="15" text-anchor="middle">1 lane funded and open · 19 more = the 20-lane design target, not funded</text>
+
+  <!-- operator -->
+  <rect x="300" y="1236" width="600" height="96" rx="6" class="node"/>
+  <text x="320" y="1268" class="d" font-size="22">Operator · hot wallet</text>
+  <text x="600" y="1268" font-size="16">funds lanes under a written cap</text>
+  <text x="320" y="1294" class="m mu" font-size="14">split.ts: N lanes, 0.01 PUSD seed each · sweep.ts: withdraw(ownerSig)</text>
+  <text x="320" y="1316" class="m mu" font-size="14">mainnet refuses without --authorized-cap</text>
+
+  <!-- status / evidence strip -->
+  <line x1="40" y1="1360" x2="1160" y2="1360" stroke="#CDD2CA" stroke-width="1.5"/>
+  <text x="40" y="1388" font-size="15"><tspan font-weight="700">State, 2026-11-21:</tspan> mainnet pool open, 1 funded lane (split tx <tspan class="m">9d80b411…7dee</tspan>) · sponsored send proven on chipnet (<tspan class="m">78be2edf…f848c</tspan>)</text>
+  <g font-size="14" class="mu">
+    <line x1="40" y1="1406" x2="68" y2="1406" stroke="#16202B" stroke-width="2"/><text x="76" y="1411" class="mu">builds / sends</text>
+    <line x1="196" y1="1406" x2="224" y2="1406" stroke="#5E6670" stroke-width="2" stroke-dasharray="6 5"/><text x="232" y="1411" class="mu">reads / returns</text>
+    <line x1="358" y1="1406" x2="386" y2="1406" stroke="#1E9E5A" stroke-width="3.5"/><text x="394" y="1411" class="mu">the fee, paid in PUSD</text>
+    <rect x="566" y="1398" width="16" height="16" rx="2" fill="none" stroke="#5E6670" stroke-width="1.5" stroke-dasharray="3 2"/><text x="590" y="1411" class="mu">design target, not funded</text>
+  </g>
+</svg>
+</div>
+</body>
+</html>
