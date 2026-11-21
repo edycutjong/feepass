@@ -1,15 +1,16 @@
 <div align="center">
-  <img src="docs/assets/icon.svg" alt="FeePass icon" width="144">
+  <img src="docs/assets/icon-animated.svg" alt="FeePass icon" width="144">
   <h1>FeePass 🎫</h1>
   <p><em>For anyone holding PUSD but no spendable BCH: a covenant pays the Bitcoin Cash network fee, and you pay it back in PUSD in the same transaction.</em></p>
   <img src="docs/assets/readme-hero-animated.svg" alt="Illustration of FeePass: a covenant pays the Bitcoin Cash network fee and you pay it back in PUSD. Lane 14 turns green and a sample ticket prints: fee paid in PUSD, no spendable BCH used." width="100%">
 
   <br/>
 
-  [![Live App](https://img.shields.io/badge/🚀_Live-App-1F4F9A?style=for-the-badge)](https://feepass.edycu.dev)
   [![For Judges](https://img.shields.io/badge/⚖️_For-Judges-1E9E5A?style=for-the-badge)](https://feepass.edycu.dev/judge/)
   [![Demo Video](https://img.shields.io/badge/🎬_Demo-Video-ef4444?style=for-the-badge)](https://youtu.be/-S5u7nPyUrQ)
+  [![Live App](https://img.shields.io/badge/🚀_Live-App-1F4F9A?style=for-the-badge)](https://feepass.edycu.dev)
   [![Pitch Deck](https://img.shields.io/badge/📊_Pitch-Deck-f59e0b?style=for-the-badge)](https://feepass.edycu.dev/deck/)
+  [![BLAZE Presentation](https://img.shields.io/badge/📑_BLAZE-Presentation-fbbc04?style=for-the-badge)](https://docs.google.com/presentation/d/1cqIM2GuEVrLRrAz3gNQu9_Uvzr4C1IgKN67-z_rSNao/edit?usp=sharing)
   [![Built for BCH BLAZE 2026](https://img.shields.io/badge/DoraHacks-BCH_BLAZE_2026-8b5cf6?style=for-the-badge)](https://dorahacks.io/hackathon/bchblaze2026/detail)
 
   <br/>
