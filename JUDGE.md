@@ -20,7 +20,7 @@ Live page: <https://feepass.edycu.dev/judge/> (same content, plus the pool's liv
 | Pool lane funded | [`9d80b411…7dee`](https://bchexplorer.info/tx/9d80b411ce736d775219d6ef7ff6dadf2c24032ceafaa9cdddbe097132197dee) | One lane of 100,000 sats + the 0.01 PUSD seed. 20 lanes is the design target. All operator txs: [`evidence/mainnet-txs.csv`](evidence/mainnet-txs.csv) |
 | Same send on chipnet | [`78be2edf…f848c`](https://chipnet.imaginary.cash/tx/78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c) | Earlier run on the public test network with a test token in place of PUSD |
 | The covenant | [`contracts/FeePassPool.cash`](contracts/FeePassPool.cash) | Eight rules (R1–R8): fixed 2-in/3-out shape, the lane comes back with exactly +0.01 PUSD, a lane loses at most 2,000 sats per send, at most 675 sats of dust top-up |
-| Tests | [CI/CD](https://github.com/edycutjong/feepass/actions/workflows/ci.yml) | 189 unit + covenant VM tests, 30 Playwright E2E (15 × desktop + mobile), Lighthouse CI, CodeQL, gitleaks over full history |
+| Tests | [CI/CD](https://github.com/edycutjong/feepass/actions/workflows/ci.yml) | 189 unit + covenant VM tests, 32 Playwright E2E (16 × desktop + mobile), Lighthouse CI, CodeQL, gitleaks over full history |
 
 ## Reproduce
 
