@@ -40,7 +40,7 @@
     "@types/node": "^26.6.6",
     "@vitejs/plugin-vue": "^6.0.11",
     "@vitest/coverage-v8": "^5.1.1",
-    "@vue/test-utils": "^2.5.1",
+    "@vue/test-utils": "^2.6.0",
     "@wizardconnect/wallet": "^0.2.4",
     "cashc": "^0.14.0",
     "esbuild": "^0.28.2",
@@ -50,5 +50,9 @@
     "vite": "^8.3.8",
     "vitest": "^5.1.0",
     "vue-tsc": "^3.3.14"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1",
+    "glob": "^14.0.2"
   }
 }
