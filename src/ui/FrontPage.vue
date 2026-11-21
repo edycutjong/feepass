@@ -73,7 +73,8 @@ onBeforeUnmount(() => { io?.disconnect(); cancelAnimationFrame(raf); });
           <template v-else-if="!board">Reading the pool from mainnet…</template>
           <template v-else-if="poolUnfunded"><strong>The pool is not open yet.</strong> You can connect and see your balances; sends start once lanes are funded.</template>
           <template v-else-if="allClosed"><strong>All {{ lanesFunded }} lanes are closed right now.</strong> You can connect and see your balances; sends start again when the operator refills them.</template>
-          <template v-else><strong>{{ board.open }} of {{ lanesFunded }} lanes open.</strong> Connect a WizardConnect wallet that holds PUSD and send.</template>
+          <template v-else><strong>{{ board.open }} of {{ lanesFunded }} lanes open.</strong> Connect a WizardConnect wallet that holds PUSD and send. Real mainnet send:
+            <a href="https://bchexplorer.info/tx/d59f120b5852280d98d6a84379c08e5b3cc11015a9c0f637e60577884aa6f8b7" target="_blank" rel="noopener" class="data" data-testid="hero-mainnet-send">d59f120b…f8b7</a> (sender BCH 0 → 0).</template>
         </p>
       </div>
     </section>

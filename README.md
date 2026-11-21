@@ -26,7 +26,7 @@
 
 ---
 
-> **Status: live on Bitcoin Cash mainnet.** The app is at <https://feepass.edycu.dev>. **First sponsored send on mainnet:** [`d59f120b…f8b7`](https://bchexplorer.info/tx/d59f120b5852280d98d6a84379c08e5b3cc11015a9c0f637e60577884aa6f8b7): 0.10 PUSD sent, the lane paid the 580-sat miner fee, exactly 0.01 PUSD went back to the pool, and the sender's spendable BCH was 0 before and 0 after (signed by a headless test key; named-wallet results are recorded via `/gate.html`). The pool is open with 1 funded lane (split tx [`9d80b411…7dee`](https://bchexplorer.info/tx/9d80b411ce736d775219d6ef7ff6dadf2c24032ceafaa9cdddbe097132197dee); 20 lanes is the target) and the starter faucet holds PUSD for judges. The same send also ran earlier on chipnet ([`78be2edf…f848c`](https://chipnet.imaginary.cash/tx/78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c)). Details under Live Deployment.
+> **Status: live on Bitcoin Cash mainnet.** First sponsored send: [`d59f120b…f8b7`](https://bchexplorer.info/tx/d59f120b5852280d98d6a84379c08e5b3cc11015a9c0f637e60577884aa6f8b7): 0.10 PUSD sent, the lane paid the 580-sat miner fee, the sender's spendable BCH stayed 0 → 0. One lane is funded (20 is the target); details, every txid, and the limits are under Live Deployment and on the [judge page](https://feepass.edycu.dev/judge/).
 
 ## 📸 See it in Action
 
@@ -81,7 +81,7 @@ The covenant's eight rules, what each prevents, and the failure model are in [do
 
 ## ⛓️ Live Deployment
 
-> **Status:** the app and the starter route are live at <https://feepass.edycu.dev>. The **mainnet pool is open: 1 funded lane** at the covenant address `bitcoincash:rd2qspagk8vt9e6qz4k3r2a50ns9jrchkh8ystkq6stdlh832a5v5ws2nz942` (derived from `src/config/mainnet.json`, shown on `/pool`). The starter faucet holds 3.20 PUSD (12 claims of 0.25). The **first sponsored send on mainnet** is [`d59f120b…f8b7`](https://bchexplorer.info/tx/d59f120b5852280d98d6a84379c08e5b3cc11015a9c0f637e60577884aa6f8b7) (record: [`evidence/mainnet-send.json`](evidence/mainnet-send.json)).
+> **Status:** the app and the starter route are live at <https://feepass.edycu.dev>. The **mainnet pool is open: 1 funded lane** at the covenant address `bitcoincash:rd2qspagk8vt9e6qz4k3r2a50ns9jrchkh8ystkq6stdlh832a5v5ws2nz942` (derived from `src/config/mainnet.json`, shown on `/pool`). The starter faucet holds PUSD for judges (live balance: `/api/feepass?op=health`; 0.25 per claim, 3 claims per UTC day). The **first sponsored send on mainnet** is [`d59f120b…f8b7`](https://bchexplorer.info/tx/d59f120b5852280d98d6a84379c08e5b3cc11015a9c0f637e60577884aa6f8b7) (record: [`evidence/mainnet-send.json`](evidence/mainnet-send.json)).
 
 **On mainnet:** the operator scripts' transactions are in [`evidence/mainnet-txs.csv`](evidence/mainnet-txs.csv).
 
@@ -187,7 +187,7 @@ test/                        13 test files
 
 ## 💰 Business Model
 
-Wallets and merchants that onboard new users in PUSD want those users to transact on day one. The sender pays 0.01 PUSD per send; nobody pays a subscription. The public pool earns the spread: PUSD in, a little BCH out (per send at most 2,000 sats: the 580-sat miner fee when the user's coin covers its own dust, 882 sats in the chipnet run). A wallet can run its own lanes with the same MIT contract by changing constructor parameters, and keep its own fees. A cent per send is small money; the business is volume across wallets. A hosted-lanes service for wallets is unvalidated and not claimed.
+Wallets and merchants that onboard new users in PUSD want those users to transact on day one. The sender pays 0.01 PUSD per send; nobody pays a subscription. The public pool earns the spread: PUSD in, a little BCH out (per send at most 2,000 sats: the 580-sat miner fee when the user's coin covers its own dust, 882 sats in both the chipnet run and the first mainnet send). A wallet can run its own lanes with the same MIT contract by changing constructor parameters, and keep its own fees. Unit economics at the price the operator script checked when funding (BCH $192.64, `src/config/mainnet.json`): a standard send costs the lane 580 sats ≈ $0.0011 and pays the pool 0.01 PUSD, about 9× its cost (882 sats ≈ $0.0017, about 6×, when the lane also tops up dust); one 100,000-sat lane covers roughly 165 standard sends before it closes for a refill. A cent per send is small money; the business is volume across wallets. A hosted-lanes service for wallets is unvalidated and not claimed.
 
 ## 📽️ Demo Materials
 

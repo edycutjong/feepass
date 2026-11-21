@@ -4,7 +4,7 @@
 //      covenant takes back exactly 0.01 PUSD; signed by the headless key over the WizardConnect request shape, verified on
 //      the BCH VM before broadcast.
 // The signer is a headless test key (~/.config/feepass/mainnet-user.env), not a named wallet. Mainnet spends are capped.
-// Usage: tsx scripts/mainnet-send.ts --network mainnet --authorized-cap <bch>   (run via specs' wrapper)
+// Usage: tsx scripts/mainnet-send.ts --network mainnet --authorized-cap <bch>
 import { writeFileSync } from 'node:fs';
 import { decodePrivateKeyWif, encodeCashAddress, hash160, secp256k1 } from '@bitauth/libauth';
 import { ElectrumNetworkProvider, SignatureTemplate, TransactionBuilder, type SpendableUtxo } from 'cashscript';
