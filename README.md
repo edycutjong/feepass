@@ -7,6 +7,7 @@
   <br/>
 
   [![Live App](https://img.shields.io/badge/🚀_Live-App-1F4F9A?style=for-the-badge)](https://feepass.edycu.dev)
+  [![Pitch Deck](https://img.shields.io/badge/📊_Pitch-Deck-f59e0b?style=for-the-badge)](https://feepass.edycu.dev/deck/)
   [![Built for BCH BLAZE 2026](https://img.shields.io/badge/DoraHacks-BCH_BLAZE_2026-8b5cf6?style=for-the-badge)](https://dorahacks.io/hackathon/bchblaze2026/detail)
 
   <br/>
@@ -16,6 +17,9 @@
   ![Vue](https://img.shields.io/badge/Vue_3-42b883?style=flat&logo=vue.js&logoColor=white)
   ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
   [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+  [![CI/CD](https://github.com/edycutjong/feepass/actions/workflows/ci.yml/badge.svg)](https://github.com/edycutjong/feepass/actions/workflows/ci.yml)
+  [![CodeQL](https://github.com/edycutjong/feepass/actions/workflows/codeql.yml/badge.svg)](https://github.com/edycutjong/feepass/actions/workflows/codeql.yml)
+  [![Release](https://img.shields.io/github/v/release/edycutjong/feepass?sort=semver)](https://github.com/edycutjong/feepass/releases/latest)
 
 </div>
 
@@ -136,12 +140,26 @@ Today the pool and the starter faucet are not funded: step 1 connects and shows 
 ## 🧪 Testing & CI
 
 ```bash
-npm test            # vitest, offline
-npm run typecheck   # vue-tsc
-npm run build       # bundles the API, type-checks, builds the static app
+npm test              # vitest: unit + covenant VM tests, offline
+npm run test:coverage # same, with v8 coverage
+npm run typecheck     # vue-tsc
+npm run build         # bundles the API, type-checks, builds the static app
+npm run e2e           # Playwright against the production build (desktop + mobile)
+npm run lighthouse    # Lighthouse CI on the built landing page and deck
 ```
 
-`.github/workflows/ci.yml` runs on pushes to `main` and on pull requests: `npm ci`, a check that the compiled covenant artifact is up to date, `npm run typecheck`, `npm test` and `npx vite build`. (GitHub Actions is currently blocked by an account billing issue, so there is no CI badge.)
+Six GitHub Actions workflows:
+
+| Workflow | Runs on | What it does |
+|---|---|---|
+| [`ci.yml`](.github/workflows/ci.yml) **CI/CD Pipeline** | push, PR | 6 stages: **1 Quality** (covenant artifact matches source, vue-tsc, vitest + coverage; Node 22 + 24 on `main`) · **2 Security** (gitleaks over full history, `npm audit` runtime high+, licence check), parallel with 1 · **3 Build** + gzip bundle budget · **4 E2E** (Playwright, desktop + mobile) · **5 Performance** (Lighthouse CI, accessibility ≥ 0.9 is a hard gate) · **6 Deploy gate** |
+| [`release.yml`](.github/workflows/release.yml) **Release** | after CI passes on `main` | Semantic version from Angular commits (`fix:` patch, `feat:` minor, `!`/`BREAKING CHANGE` major), tag + GitHub Release with generated notes |
+| [`deploy.yml`](.github/workflows/deploy.yml) **Deploy** | after Release | Vercel production build + deploy, recorded as a GitHub Deployment (environment `production`), then a live smoke test of 5 routes |
+| [`codeql.yml`](.github/workflows/codeql.yml) **CodeQL** | push, PR, weekly | SAST, `security-extended` queries |
+| [`gitleaks.yml`](.github/workflows/gitleaks.yml) **Secret scan** | push, PR, daily | gitleaks over every commit on every ref |
+| [`dependency-review.yml`](.github/workflows/dependency-review.yml) **Dependency review** | PR | Blocks new dependencies with high-severity advisories or GPL-3.0/AGPL-3.0 licences |
+
+Dependabot (monthly, grouped, majors ignored), Dependabot security updates, secret scanning and push protection are enabled on the repo. The landing page footer and the deck show the released version.
 
 ## 📁 Project Structure
 
