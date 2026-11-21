@@ -157,8 +157,9 @@ require(tx.outputs.length == 3);</code></pre>
           <li><strong>Not free, not gasless.</strong> You pay {{ fee }} PUSD per send. That is the fee, and the pool's revenue.</li>
           <li><strong>Not the recipient's guard.</strong> The covenant does not check who gets paid. Your own signature covers the outputs, as far as your wallet shows them.</li>
           <li><strong>Not a mainnet receipt.</strong> The ticket above is a sample: its figures are computed offline from the compiled covenant.<span
-            v-if="poolUnfunded && !error" data-testid="honest-pool"> The mainnet pool is not funded yet.</span> A send of the same fixed shape has run once on
-            Bitcoin Cash's public test network, with a test token in place of PUSD (<a :href="blob('DEMO.md')" data-testid="testnet-proof">DEMO.md, section 4</a>).</li>
+            v-if="poolUnfunded && !error" data-testid="honest-pool"> The mainnet pool is not funded yet.</span> Real sends of the same fixed shape are on chain: the first sponsored send on mainnet,
+            <a href="https://bchexplorer.info/tx/d59f120b5852280d98d6a84379c08e5b3cc11015a9c0f637e60577884aa6f8b7" target="_blank" rel="noopener" class="data" data-testid="mainnet-proof">d59f120b…f8b7</a>
+            (signed by a headless test key), and an earlier one on Bitcoin Cash's public test network (<a :href="blob('DEMO.md')" data-testid="testnet-proof">DEMO.md, section 4</a>).</li>
           <li><strong>Not bounded in total.</strong> The covenant caps what each send can take from a lane; many sends can still use lanes up, and the operator refills them.</li>
           <li><strong>Not verified on a named wallet yet.</strong> Wallet results are recorded on the <a href="/gate.html">wallet gate page</a> by a person holding the wallet.</li>
         </ul>

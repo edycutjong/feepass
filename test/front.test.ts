@@ -75,7 +75,8 @@ describe('FrontPage', () => {
     expect(w.get('[data-testid=front-status]').text()).toContain('The pool is not open yet.');
     expect(w.get('[data-testid=front-status]').classes()).toContain('closed');
     expect(w.find('[data-testid=honest-pool]').exists()).toBe(true);
-    expect(w.text()).toContain('A send of the same fixed shape has run once'); // the chipnet run was the top-up case, not the sample
+    expect(w.text()).toContain('Real sends of the same fixed shape are on chain'); // the real sends are named, not the sample ticket
+    expect(w.get('[data-testid=mainnet-proof]').attributes('href')).toMatch(/^https:\/\/bchexplorer\.info\/tx\/d59f120b[0-9a-f]{56}$/);
     expect(w.get('#live-h').text()).toBe('The pool, live from mainnet: not open yet');
     expect(w.text()).toContain('The ticket above is a sample');
     expect(w.get('[data-testid=testnet-proof]').attributes('href')).toMatch(/\/blob\/main\/DEMO\.md$/);

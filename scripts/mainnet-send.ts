@@ -66,7 +66,7 @@ async function main() {
   const userUtxo = userCoins.find((u) => u.token?.category === CAT)! as SpendableUtxo;
   const lanes = (await provider.getUtxos(pool.address)).filter((u) => u.token?.category === CAT && u.satoshis >= DEFAULT_PARAMS.maxSubsidy + 1_000n);
   if (lanes.length === 0) throw new Error('no open lane');
-  const lane = lanes[Math.floor(Math.random() * lanes.length)];
+  const lane = lanes[Math.floor(Math.random() * lanes.length)]!;
   const send = buildSponsoredSend({ pool, params: DEFAULT_PARAMS, categoryDisplay: CAT, userUtxo, userAddress: user.tokenAddress, lane, recipient: config.demoRecipient, amount: SEND_UNITS });
   const req = toWizardRequest(send, { pathName: 'receive', addressIndex: 0 });
   const signed = signWcTransaction(req.wire, new Map([[0, user.priv]]));
