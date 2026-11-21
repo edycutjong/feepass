@@ -11,7 +11,7 @@ test('core flow entry: a connect action is offered and no receipt is shown befor
 test('footer links to the source, covenant and release', async ({ page }) => {
   await page.goto('/');
   const footer = page.locator('footer');
-  await expect(footer.getByRole('link', { name: 'Source' })).toHaveAttribute('href', /github\.com\/edycutjong\/feepass/);
-  await expect(footer.getByRole('link', { name: 'Covenant' })).toHaveAttribute('href', /FeePassPool\.cash/);
-  await expect(footer.getByRole('link', { name: /release/i })).toHaveAttribute('href', /\/releases/);
+  await expect(footer.getByRole('link', { name: 'Source' })).toHaveAttribute('href', /^https:\/\/github\.com\/edycutjong\/feepass$/);
+  await expect(footer.getByRole('link', { name: 'Covenant' })).toHaveAttribute('href', /^https:\/\/github\.com\/edycutjong\/feepass\/blob\/main\/contracts\/FeePassPool\.cash$/);
+  await expect(footer.getByRole('link', { name: /release/i })).toHaveAttribute('href', /^https:\/\/github\.com\/edycutjong\/feepass\/releases\/tag\/v\d+\.\d+\.\d+$/);
 });

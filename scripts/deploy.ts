@@ -1,7 +1,7 @@
 // "Deploys" the pool: a P2SH32 covenant needs no deploy tx, so this derives its address from the constructor args,
 // asserts the economic invariants, and writes src/config/<network>.json for the app.
 // Usage: tsx scripts/deploy.ts --network mock|chipnet|mainnet --bch-usd <price> [--category <display hex>] [--authorized-cap <bch>]
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { binToHex } from '@bitauth/libauth';
 import { MockNetworkProvider, randomUtxo } from 'cashscript';
@@ -47,7 +47,16 @@ if (checks.some(([, ok]) => !ok)) process.exit(1);
 
 const artifactBytes = readFileSync(new URL('../src/contracts/FeePassPool.artifact.json', import.meta.url));
 const configUrl = new URL(`../src/config/${net}.json`, import.meta.url);
-const existing = existsSync(configUrl) ? (JSON.parse(readFileSync(configUrl, 'utf8')) as Record<string, unknown>) : null;
+// Read once and handle a missing file in the catch (no exists-then-read window).
+function readExisting(): Record<string, unknown> | null {
+  try {
+    return JSON.parse(readFileSync(configUrl, 'utf8')) as Record<string, unknown>;
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw e;
+  }
+}
+const existing = readExisting();
 // Merge, never replace: lanes, explorerTx, demoRecipient (the faucet), repoUrl and payoutAddress are operator-set and kept.
 const config = mergeDeployedConfig(existing, {
   network: net,
