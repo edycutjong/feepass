@@ -2,10 +2,10 @@
 
 FeePass lets a wallet that holds PUSD (ParyonUSD, a CashToken on Bitcoin Cash) but **no spendable BCH** send PUSD on mainnet.
 > **Status (update this line when it changes):** the covenant, builder, flow, app and starter route are built and tested
-> (`npm test`) and the app is live; the **mainnet pool is not funded yet** (the app derives its address from
-> `src/config/mainnet.json` and shows it on `/pool`), so there is no mainnet txid in this repo. `evidence/` holds offline
-> measurements and one real sponsored send on chipnet (`evidence/chipnet-send.json`, test token in place of PUSD);
-> `evidence/mainnet-txs.csv` appears when the operator tools first run on mainnet. Wallet compatibility (does a given wallet sign this request) is unverified until a human records it via `/gate.html`.
+> (`npm test`) and the app is live; the **mainnet pool is open with 1 funded lane** (split tx `9d80b411…7dee`,
+> 2026-11-21; the address is derived from `src/config/mainnet.json` and shown on `/pool`). The first sponsored mainnet
+> send by a real wallet is pending. `evidence/` holds offline measurements, one real sponsored send on chipnet
+> (`evidence/chipnet-send.json`, test token in place of PUSD) and the operator's mainnet txs (`evidence/mainnet-txs.csv`). Wallet compatibility (does a given wallet sign this request) is unverified until a human records it via `/gate.html`.
 
 A CashScript covenant ("the pool") pays the miner fee in sats; the sender pays for it in dollars: exactly `f` = 1 base unit
 (0.01 PUSD) of PUSD goes to the pool. This file is written for a reader who will answer questions about the repo (human or

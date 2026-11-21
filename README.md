@@ -25,15 +25,15 @@
 
 ---
 
-> **Status:** the app is live at <https://feepass.edycu.dev> and one real sponsored send has run on chipnet (Bitcoin Cash's public test network, [txid `78be2edf…f848c`](https://chipnet.imaginary.cash/tx/78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c)). The **mainnet pool is not funded yet**, so on the live app you can connect and see your balances, and a send stops at "Pool not open yet". Details under Live Deployment.
+> **Status:** the app is live at <https://feepass.edycu.dev> and one real sponsored send has run on chipnet (Bitcoin Cash's public test network, [txid `78be2edf…f848c`](https://chipnet.imaginary.cash/tx/78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c)). The **mainnet pool is open with 1 funded lane** (split tx [`9d80b411…7dee`](https://bchexplorer.info/tx/9d80b411ce736d775219d6ef7ff6dadf2c24032ceafaa9cdddbe097132197dee), 2026-11-21; 20 lanes is the target) and the starter faucet holds 3.20 PUSD. The first sponsored mainnet send by a real wallet is pending and is added here when it lands. Details under Live Deployment.
 
 ## 📸 See it in Action
 
 <p align="center">
-  <img src="docs/assets/devpost-gallery.png" alt="Diagram of the one fixed-shape transaction: your PUSD coin and one pool lane in, three outputs, the 580-sat miner fee paid by the lane" width="100%">
+  <img src="docs/assets/feepass-broll.gif" alt="The live FeePass front page: lane 14 of the sample booth turns green and a SAMPLE ticket prints PAID, 0.01 PUSD, 580 sats; then the one transaction, your PUSD coin and one pool lane in, the lane back to the pool with +0.01 PUSD" width="100%">
 </p>
 
-The picture is a diagram of the transaction shape; "lane 14" is an example label, not a funded mainnet lane. Live: <https://feepass.edycu.dev> (the pool page is `/pool`).
+Captured frame by frame from the live front page. The booth is the site's own sample replay (its ticket says SAMPLE, not a mainnet send); "lane 14" is an example label. Live: <https://feepass.edycu.dev> (the pool page is `/pool`).
 
 ## 💡 The Problem & Solution
 
@@ -43,7 +43,7 @@ A new user holds dollars (PUSD, a CashToken on Bitcoin Cash) and **no spendable 
 
 ### The Solution
 
-A CashScript covenant, **the pool**, is designed to hold BCH in 20 UTXOs called lanes (the target; none is funded on mainnet yet). A send spends the user's PUSD coin **and one lane** in the same transaction. The lane pays the miner fee. The covenant requires that exactly **0.01 PUSD** comes back to the pool, so the user pays the fee in dollars and the pool earns that revenue in PUSD. The user's wallet signs only its own input, over WizardConnect.
+A CashScript covenant, **the pool**, is designed to hold BCH in 20 UTXOs called lanes (the target; 1 is funded on mainnet today). A send spends the user's PUSD coin **and one lane** in the same transaction. The lane pays the miner fee. The covenant requires that exactly **0.01 PUSD** comes back to the pool, so the user pays the fee in dollars and the pool earns that revenue in PUSD. The user's wallet signs only its own input, over WizardConnect.
 
 What it does and does not promise:
 
@@ -54,7 +54,7 @@ What it does and does not promise:
 ## 🏗️ Architecture & Tech Stack
 
 <p align="center">
-  <img src="docs/assets/architecture.svg" alt="The one transaction: in0 the user's PUSD coin, in1 one pool lane; out0 PUSD to the recipient, out1 PUSD change, out2 the lane back to the pool plus exactly 0.01 PUSD; the miner fee comes from the lane's BCH." width="100%">
+  <a href="docs/architecture.html"><img src="docs/assets/architecture.png" alt="FeePass architecture: off-chain, a WizardConnect wallet, the FeePass app and Fulcrum, with Vercel serving the app and the starter route; the one transaction, in0 the user's PUSD coin and in1 one pool lane through covenant rules R1 to R8 to out0 PUSD to the recipient, out1 PUSD change and out2 the lane back to the pool plus exactly 0.01 PUSD, 580 sats to miners; below, the pool's lane board with 1 lane open of a 20-lane target, and the operator's split and sweep scripts." width="100%"></a>
 </p>
 
 | Layer | Choice | Where |
@@ -80,7 +80,14 @@ The covenant's eight rules, what each prevents, and the failure model are in [do
 
 ## ⛓️ Live Deployment
 
-> **Status:** the app and the starter route are live at <https://feepass.edycu.dev>. The **mainnet pool is not funded yet**: the covenant address is derived from `src/config/mainnet.json` and shown on `/pool`, but no lane at it holds BCH, so there is **no mainnet FeePass txid** and the app shows "Pool not open yet". The starter faucet is empty too. Today a judge can connect a wallet and see balances; a send needs a funded lane. This section is updated, with explorer links, when the operator tools first run on mainnet; their txids are appended to `evidence/mainnet-txs.csv`.
+> **Status:** the app and the starter route are live at <https://feepass.edycu.dev>. The **mainnet pool is open: 1 funded lane** at the covenant address `bitcoincash:rd2qspagk8vt9e6qz4k3r2a50ns9jrchkh8ystkq6stdlh832a5v5ws2nz942` (derived from `src/config/mainnet.json`, shown on `/pool`). The starter faucet holds 3.20 PUSD (12 claims of 0.25). The first sponsored mainnet send by a real wallet is pending; its txid is added here when it lands.
+
+**On mainnet:** the operator scripts' transactions are in [`evidence/mainnet-txs.csv`](evidence/mainnet-txs.csv).
+
+| Tx | What | Explorer |
+|---|---|---|
+| `9d80b411…7dee` | `split.ts --lanes 1`: one lane of 100,000 sats + the 0.01 PUSD seed (R7) to the covenant, fee 617 sats | [bchexplorer.info](https://bchexplorer.info/tx/9d80b411ce736d775219d6ef7ff6dadf2c24032ceafaa9cdddbe097132197dee) |
+| `b09afb94…fafd` | hot-wallet prep (returning BCH to the operator's wallet), fee 300 sats | [bchexplorer.info](https://bchexplorer.info/tx/b09afb943bb1ba9fc0b4d00d23748011d3f6d8aea2dc63588be0137be241fafd) |
 
 **On a real chain (chipnet, Bitcoin Cash's public test network):** one sponsored send, broadcast and read back on 2026-11-20 by [`scripts/chipnet-spike.ts`](scripts/chipnet-spike.ts) through the same builder and VM check the app uses. Txid [`78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c`](https://chipnet.imaginary.cash/tx/78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c) (chipnet explorer): 2 inputs (the user's token coin, one pool lane), 3 outputs, 572 bytes, 580 sats miner fee paid by the lane, exactly 1 fee unit back to the pool, user spendable BCH 0 before and 0 after. Chipnet has no PUSD, so a test token stands in for it, and a headless test key signs, not a named wallet. Record: [`evidence/chipnet-send.json`](evidence/chipnet-send.json), rows in [`evidence/chipnet-txs.csv`](evidence/chipnet-txs.csv).
 
@@ -128,12 +135,12 @@ npm test        # 189 tests (188 run before the first build), offline
 npm run dev     # the app, reading Bitcoin Cash mainnet
 ```
 
-### Try it with your own wallet (about 60 seconds, once the pool is funded)
+### Try it with your own wallet (about 60 seconds)
 
-Today the pool and the starter faucet are not funded: step 1 connects and shows your balances, step 2 answers "The faucet is out for now", and **Send** stops at "Pool not open yet".
+The pool has 1 open lane, so if two people send in the same moment one of them is asked to re-sign on another lane or retry.
 
 1. Open <https://feepass.edycu.dev> and press **Connect wallet**; approve in a WizardConnect wallet.
-2. No PUSD yet? Once the starter faucet is funded, **Get 0.25 starter PUSD** gives one claim per address (3 per UTC day). It is not funded yet (check `/api/feepass?op=health`), so for now bring a wallet that already holds PUSD.
+2. No PUSD yet? **Get 0.25 starter PUSD** gives one claim per address (3 per UTC day; live balance at `/api/feepass?op=health`).
 3. Enter a mainnet recipient and an amount, then **Send**. Approve the single signature request.
 4. The ticket shows what was sent, the fee you paid in PUSD, the lane that paid the miner fee, and your spendable BCH before and after.
 

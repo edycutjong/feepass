@@ -7,7 +7,7 @@ Sections 1–2 run offline from a fresh clone; section 3 needs internet (the rea
 | Piece | State |
 |---|---|
 | App, starter route, pool page | live at <https://feepass.edycu.dev> |
-| Mainnet pool (20 lanes) | **not funded yet**; the app shows "Pool not open yet" and no mainnet txid exists in this repo |
+| Mainnet pool (20-lane target) | **open, 1 funded lane** (split tx [`9d80b411…7dee`](https://bchexplorer.info/tx/9d80b411ce736d775219d6ef7ff6dadf2c24032ceafaa9cdddbe097132197dee)); first sponsored mainnet send by a real wallet pending |
 | Wallet compatibility (Selene, Paytaca) | **unverified**; record it on `/gate.html` |
 | Sponsored send on a real chain | **chipnet**, 2026-11-20: txid `78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c` (test token in place of PUSD, headless test key; section 4) |
 
@@ -69,7 +69,7 @@ Record: `evidence/chipnet-send.json`, rows: `evidence/chipnet-txs.csv`.
 ## 5. Use it with a real wallet (needs the funded pool)
 
 1. Open <https://feepass.edycu.dev>, press **Connect wallet**, approve in a WizardConnect wallet.
-2. Press **Get 0.25 starter PUSD** if the wallet holds none (the starter faucet is not funded yet; check `/api/feepass?op=health`).
+2. Press **Get 0.25 starter PUSD** if the wallet holds none (the starter faucet holds 3.20 PUSD, 3 claims per UTC day; check `/api/feepass?op=health`).
 3. Enter a mainnet recipient and an amount, press **Send**, approve one signature request.
 4. On the ticket, compare "spendable BCH before" and "after": the send does not touch them. Open the txid in the explorer (<https://bchexplorer.info/tx/>) and check inputs `in0` (yours) and `in1` (the lane), and that `out2` returns to the pool with exactly 0.01 PUSD more.
 
