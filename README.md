@@ -191,7 +191,7 @@ Wallets and merchants that onboard new users in PUSD want those users to transac
 
 ## 📽️ Demo Materials
 
-Live app: <https://feepass.edycu.dev> · Pitch deck: <https://feepass.edycu.dev/deck/> (arrow keys, N for notes) · How to reproduce every number: [DEMO.md](DEMO.md).
+Live app: <https://feepass.edycu.dev> · For judges: <https://feepass.edycu.dev/judge/> · BCH BLAZE presentation (Widget Factory template): [Google Slides](https://docs.google.com/presentation/d/1cqIM2GuEVrLRrAz3gNQu9_Uvzr4C1IgKN67-z_rSNao/edit?usp=sharing) · Pitch deck (web): <https://feepass.edycu.dev/deck/> (arrow keys, N for notes) · How to reproduce every number: [DEMO.md](DEMO.md).
 
 ## 🤖 How this was built
 

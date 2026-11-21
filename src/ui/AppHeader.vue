@@ -1,9 +1,26 @@
 <script setup lang="ts">
 defineProps<{ height: number | null; chainError: string; connected: boolean; walletName: string | null; repoUrl: string; payout: string }>();
 defineEmits<{ connect: []; disconnect: [] }>();
+import { ref } from 'vue';
+// BCH BLAZE 2026 eligibility banner (top of the home page): the Widget Factory presentation, the repo, and the CashTokens
+// address for EMBER2026 Community Choice votes.
+const SLIDES_URL = 'https://docs.google.com/presentation/d/1cqIM2GuEVrLRrAz3gNQu9_Uvzr4C1IgKN67-z_rSNao/edit?usp=sharing';
+const copied = ref(false);
+async function copyAddr(addr: string) {
+  try { await navigator.clipboard.writeText(addr); copied.value = true; setTimeout(() => (copied.value = false), 1600); } catch { /* clipboard blocked: the address stays selectable */ }
+}
 </script>
 
 <template>
+  <aside class="blaze" aria-label="BCH BLAZE 2026 project links" data-testid="blaze-banner">
+    <div class="wrap blz">
+      <span class="tag">BCH BLAZE 2026 · new project, built during the hackathon</span>
+      <a :href="SLIDES_URL" target="_blank" rel="noopener" data-testid="blaze-slides">Presentation (Widget Factory) ↗</a>
+      <a :href="repoUrl" target="_blank" rel="noopener" data-testid="blaze-repo">GitHub ↗</a>
+      <span class="vote">EMBER2026 votes: <span class="data addr" data-testid="blaze-ember">{{ payout }}</span>
+        <button type="button" class="cp" @click="copyAddr(payout)" :aria-label="copied ? 'Address copied' : 'Copy the EMBER2026 address'">{{ copied ? 'Copied' : 'Copy' }}</button></span>
+    </div>
+  </aside>
   <header class="hdr">
     <div class="wrap bar">
       <a class="brand display" href="/" aria-label="FeePass home"><img src="/icon.svg" alt="" width="38" height="38" class="mark">FeePass</a>
@@ -26,6 +43,19 @@ defineEmits<{ connect: []; disconnect: [] }>();
 </template>
 
 <style scoped>
+.blaze { background: var(--housing); color: #E8ECEF; font-size: 14px; }
+.blaze .wrap { max-width: 1140px; padding: 0 24px; margin: 0 auto; }
+.blz { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 18px; min-height: 40px; padding: 4px 0; }
+.blaze .tag { font: 600 12px/1.3 var(--font-data); letter-spacing: .06em; text-transform: uppercase; color: var(--caution); }
+.blaze a { color: #FFFFFF; min-height: 36px; display: inline-flex; align-items: center; text-underline-offset: 3px; }
+.blaze a:hover { text-decoration-thickness: 2px; opacity: .85; }
+.blaze .vote { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.blaze .addr { font-size: 13px; overflow-wrap: anywhere; user-select: all; }
+.blaze .cp { font: 600 12px/1 var(--font-body); color: var(--housing); background: #E8ECEF; border: 0; border-radius: 4px; padding: 6px 9px; min-height: 28px; cursor: pointer;
+  transition: opacity .14s var(--ease), transform .14s var(--ease); }
+.blaze .cp:hover { opacity: .85; } .blaze .cp:active { transform: translateY(1px); }
+.blaze :focus-visible { outline-color: #FFFFFF; }
+@media (max-width: 560px) { .blaze .wrap { padding: 0 16px; } }
 .hdr { background: var(--sign); color: var(--sign-ink); box-shadow: inset 0 0 0 3px var(--sign), inset 0 0 0 5px rgba(255,255,255,.9); padding: 10px 0 8px; }
 .hdr .wrap { max-width: 1140px; padding: 0 24px; }
 .bar { display: flex; align-items: center; gap: 14px; min-height: 56px; }
