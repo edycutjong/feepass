@@ -25,7 +25,7 @@
 
 ---
 
-> **Status:** the app is live at <https://feepass.edycu.dev> and one real sponsored send has run on chipnet (Bitcoin Cash's public test network, [txid `78be2edf…f848c`](https://chipnet.imaginary.cash/tx/78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c)). The **mainnet pool is open with 1 funded lane** (split tx [`9d80b411…7dee`](https://bchexplorer.info/tx/9d80b411ce736d775219d6ef7ff6dadf2c24032ceafaa9cdddbe097132197dee), 2026-11-21; 20 lanes is the target) and the starter faucet holds 3.20 PUSD. The first sponsored mainnet send by a real wallet is pending and is added here when it lands. Details under Live Deployment.
+> **Status: live on Bitcoin Cash mainnet.** The app is at <https://feepass.edycu.dev>. **First sponsored send on mainnet:** [`d59f120b…f8b7`](https://bchexplorer.info/tx/d59f120b5852280d98d6a84379c08e5b3cc11015a9c0f637e60577884aa6f8b7): 0.10 PUSD sent, the lane paid the 580-sat miner fee, exactly 0.01 PUSD went back to the pool, and the sender's spendable BCH was 0 before and 0 after (signed by a headless test key; named-wallet results are recorded via `/gate.html`). The pool is open with 1 funded lane (split tx [`9d80b411…7dee`](https://bchexplorer.info/tx/9d80b411ce736d775219d6ef7ff6dadf2c24032ceafaa9cdddbe097132197dee); 20 lanes is the target) and the starter faucet holds PUSD for judges. The same send also ran earlier on chipnet ([`78be2edf…f848c`](https://chipnet.imaginary.cash/tx/78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c)). Details under Live Deployment.
 
 ## 📸 See it in Action
 
@@ -80,13 +80,15 @@ The covenant's eight rules, what each prevents, and the failure model are in [do
 
 ## ⛓️ Live Deployment
 
-> **Status:** the app and the starter route are live at <https://feepass.edycu.dev>. The **mainnet pool is open: 1 funded lane** at the covenant address `bitcoincash:rd2qspagk8vt9e6qz4k3r2a50ns9jrchkh8ystkq6stdlh832a5v5ws2nz942` (derived from `src/config/mainnet.json`, shown on `/pool`). The starter faucet holds 3.20 PUSD (12 claims of 0.25). The first sponsored mainnet send by a real wallet is pending; its txid is added here when it lands.
+> **Status:** the app and the starter route are live at <https://feepass.edycu.dev>. The **mainnet pool is open: 1 funded lane** at the covenant address `bitcoincash:rd2qspagk8vt9e6qz4k3r2a50ns9jrchkh8ystkq6stdlh832a5v5ws2nz942` (derived from `src/config/mainnet.json`, shown on `/pool`). The starter faucet holds 3.20 PUSD (12 claims of 0.25). The **first sponsored send on mainnet** is [`d59f120b…f8b7`](https://bchexplorer.info/tx/d59f120b5852280d98d6a84379c08e5b3cc11015a9c0f637e60577884aa6f8b7) (record: [`evidence/mainnet-send.json`](evidence/mainnet-send.json)).
 
 **On mainnet:** the operator scripts' transactions are in [`evidence/mainnet-txs.csv`](evidence/mainnet-txs.csv).
 
 | Tx | What | Explorer |
 |---|---|---|
 | `9d80b411…7dee` | `split.ts --lanes 1`: one lane of 100,000 sats + the 0.01 PUSD seed (R7) to the covenant, fee 617 sats | [bchexplorer.info](https://bchexplorer.info/tx/9d80b411ce736d775219d6ef7ff6dadf2c24032ceafaa9cdddbe097132197dee) |
+| `d59f120b…f8b7` | **sponsored send** (`scripts/mainnet-send.ts`): 2 inputs (a token coin holding 0.20 PUSD and 1,000 sats, lane `9d80b411:0`), 3 outputs: 0.10 PUSD to the recipient, 0.09 PUSD change, the lane back to the pool with 99,118 sats and +0.01 PUSD; 572 bytes, 580 sats miner fee from the lane, sender spendable BCH 0 → 0, sighash 0x61. Signed by a headless test key over the same WizardConnect request and VM check the app uses, not a named wallet | [bchexplorer.info](https://bchexplorer.info/tx/d59f120b5852280d98d6a84379c08e5b3cc11015a9c0f637e60577884aa6f8b7) |
+| `7c0b37c3…7f55` | prep: funds that test key with one token coin (1,000 sats + 0.20 PUSD) | [bchexplorer.info](https://bchexplorer.info/tx/7c0b37c3e5c863987ef17fd508f686ba2ebd1211519e5a07d02d8717349b7f55) |
 | `b09afb94…fafd` | hot-wallet prep (returning BCH to the operator's wallet), fee 300 sats | [bchexplorer.info](https://bchexplorer.info/tx/b09afb943bb1ba9fc0b4d00d23748011d3f6d8aea2dc63588be0137be241fafd) |
 
 **On a real chain (chipnet, Bitcoin Cash's public test network):** one sponsored send, broadcast and read back on 2026-11-20 by [`scripts/chipnet-spike.ts`](scripts/chipnet-spike.ts) through the same builder and VM check the app uses. Txid [`78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c`](https://chipnet.imaginary.cash/tx/78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c) (chipnet explorer): 2 inputs (the user's token coin, one pool lane), 3 outputs, 572 bytes, 580 sats miner fee paid by the lane, exactly 1 fee unit back to the pool, user spendable BCH 0 before and 0 after. Chipnet has no PUSD, so a test token stands in for it, and a headless test key signs, not a named wallet. Record: [`evidence/chipnet-send.json`](evidence/chipnet-send.json), rows in [`evidence/chipnet-txs.csv`](evidence/chipnet-txs.csv).
@@ -176,7 +178,7 @@ src/core/                    pure TypeScript: builder, send flow, lanes, config,
 src/ui/                      the Vue app (front page, send form, lane board, ticket)
 src/server/ + api/           the one serverless route (starter PUSD, pool health)
 scripts/                     operator tools: deploy, split into lanes, sweep, spike, measure
-evidence/                    offline measurements and the chipnet send (mainnet txids appear here later)
+evidence/                    offline measurements, the chipnet send, and the mainnet txs + first mainnet send
 public/deck/                 the pitch deck (one HTML file, served at /deck/)
 docs/                        ARCHITECTURE.md, DX-REPORT.md, assets/
 test/                        13 test files

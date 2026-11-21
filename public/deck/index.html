@@ -244,7 +244,7 @@ body.show-notes .notes-panel { display: block; }
       <p class="display big anim d2">The lane <span class="plate-word">pays the fee.</span><br>You pay a cent.</p>
       <p class="tagline anim d3"><strong>Send dollars on Bitcoin Cash. No spendable BCH needed.</strong></p>
       <p class="chip anim d4"><span>GitHub</span>github.com/edycutjong/feepass</p>
-      <p class="chip anim d4"><span>Status</span>mainnet pool open · 1 lane funded</p>
+      <p class="chip anim d4"><span>Status</span>live on mainnet · first send d59f120b…</p>
     </div>
     <img class="bigmark anim d2" src="icon.svg" alt="" width="420" height="420">
     <aside class="notes">Tagline: send dollars on Bitcoin Cash with no spendable BCH. A covenant lane pays the miner fee; you pay 0.01 PUSD in the same transaction. Not "zero BCH" (a token coin carries dust) and not free: the fee is 0.01 PUSD per send, paid to the pool. MIT licensed.</aside>
@@ -304,7 +304,7 @@ body.show-notes .notes-panel { display: block; }
     <span class="hl">require(tx.outputs[2].tokenAmount ==</span>
     <span class="hl">        tx.inputs[1].tokenAmount + feeTokens);</span>
 }</pre>
-      <p class="codecap">FeePassPool.cash · 572 B / 580 sats in a real chipnet send; pool open on mainnet</p>
+      <p class="codecap">FeePassPool.cash · 572 B / 580 sats in a real mainnet send (d59f120b…)</p>
     </div>
     <aside class="notes">One UTXO of the covenant is one lane. A send spends the user's PUSD coin (in0, signed by the user's wallet with SIGHASH_ALL|UTXOS, 0x61) and one lane (in1, no key). The excerpt omits R2, R3, R6, R7, R8 and the owner's withdraw path for space; the full contract is 8 rules plus withdraw. 572 bytes with a Schnorr signature; an ECDSA signature can add a few bytes, which the fee calculation allows for. Sizes from evidence/tx-shape.json.</aside>
     <div class="foot"><span><b>FEEPASS</b> · BCH BLAZE 2026</span><span>v4 · 2026-11-21 · 5 / 7</span></div>
@@ -314,13 +314,13 @@ body.show-notes .notes-panel { display: block; }
   <section class="slide s6" data-title="The vision" aria-label="Slide 6: The vision">
     <h2 class="display anim">The vision for FeePass</h2>
     <div class="road">
-      <div class="plate now anim d2"><h3>Now: live app, tested covenant</h3><p>Pool open: 1 lane.</p></div>
+      <div class="plate now anim d2"><h3>Now: live app, tested covenant</h3><p>Live on mainnet: 1 lane.</p></div>
       <div class="plate anim d3"><h3>Next: open the pool</h3><p>20 lanes, real wallets.</p></div>
       <div class="plate anim d4"><h3>Then: wallets run lanes</h3><p>Same covenant, their fees.</p></div>
     </div>
     <div class="target anim d4"><span class="display">Target</span><p>20 open lanes, then one wallet running its own.</p></div>
     <p class="prio anim d4">Next priority: wallet integrations.</p>
-    <aside class="notes">Now: the app is live and the covenant is tested, and the mainnet pool is open with 1 funded lane (split tx 9d80b411…7dee); the first sponsored mainnet send by a real wallet is pending. Next: fund 20 lanes on mainnet and record sends from real wallets on the wallet gate page. Then: a wallet deploys the same covenant for its own new users and keeps the fees. A cent per send is small money; the business is volume across wallets. No usage numbers are shown because no mainnet usage exists yet; the hosted-lanes path is unvalidated.</aside>
+    <aside class="notes">Now: the app is live and the covenant is tested, and the mainnet pool is open with 1 funded lane (split tx 9d80b411…7dee); the first sponsored mainnet send is d59f120b…f8b7 (572 bytes, 580 sats paid by the lane, sender spendable BCH 0 before and after). Next: fund 20 lanes on mainnet and record sends from real wallets on the wallet gate page. Then: a wallet deploys the same covenant for its own new users and keeps the fees. A cent per send is small money; the business is volume across wallets. No usage numbers are shown because no mainnet usage exists yet; the hosted-lanes path is unvalidated.</aside>
     <div class="foot"><span><b>FEEPASS</b> · BCH BLAZE 2026</span><span>v4 · 2026-11-21 · 6 / 7</span></div>
   </section>
 

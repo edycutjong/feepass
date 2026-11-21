@@ -7,7 +7,7 @@ Sections 1–2 run offline from a fresh clone; section 3 needs internet (the rea
 | Piece | State |
 |---|---|
 | App, starter route, pool page | live at <https://feepass.edycu.dev> |
-| Mainnet pool (20-lane target) | **open, 1 funded lane** (split tx [`9d80b411…7dee`](https://bchexplorer.info/tx/9d80b411ce736d775219d6ef7ff6dadf2c24032ceafaa9cdddbe097132197dee)); first sponsored mainnet send by a real wallet pending |
+| Mainnet pool (20-lane target) | **open, 1 funded lane** (split tx [`9d80b411…7dee`](https://bchexplorer.info/tx/9d80b411ce736d775219d6ef7ff6dadf2c24032ceafaa9cdddbe097132197dee)); first sponsored mainnet send [`d59f120b…f8b7`](https://bchexplorer.info/tx/d59f120b5852280d98d6a84379c08e5b3cc11015a9c0f637e60577884aa6f8b7) (headless test key; 572 B, 580 sats from the lane, sender spendable BCH 0 → 0) |
 | Wallet compatibility (Selene, Paytaca) | **unverified**; record it on `/gate.html` |
 | Sponsored send on a real chain | **chipnet**, 2026-11-20: txid `78be2edfa73b406c8a8b7bec30d633ddb8b3cf30aab34edc017ab0a6556f848c` (test token in place of PUSD, headless test key; section 4) |
 
