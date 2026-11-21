@@ -87,10 +87,11 @@ describe('starter claim', () => {
     await expect(claimStarter(chain, cfg, judge(2))).resolves.toBeTruthy();
   });
 
-  it('caps public claims per UTC day (default 3)', async () => {
-    const { chain, cfg } = setup({ coins: [300n] });
-    for (let i = 0; i < 3; i++) await claimStarter(chain, cfg, judge(10 + i));
-    await expect(claimStarter(chain, cfg, judge(20))).rejects.toMatchObject({ code: 'DAILY_CAP' });
+  it('caps public claims per UTC day (the default cap)', async () => {
+    const { chain, cfg } = setup({ coins: [600n] });
+    expect(cfg.dailyCap).toBe(STARTER_DEFAULTS.dailyCap);
+    for (let i = 0; i < STARTER_DEFAULTS.dailyCap; i++) await claimStarter(chain, cfg, judge(10 + i));
+    await expect(claimStarter(chain, cfg, judge(900))).rejects.toMatchObject({ code: 'DAILY_CAP' }); // a fresh address, past the cap
   });
 
   it('claims confirmed on an earlier UTC day do not use today’s slots, but still lock their address', async () => {

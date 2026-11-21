@@ -43,7 +43,7 @@ describe('api/feepass', () => {
     const { deps } = rig();
     const r = await handle(new Request('https://x.test/api/feepass?op=health'), deps, new IpLimiter());
     expect(r.status).toBe(200);
-    expect(await r.json()).toMatchObject({ ok: true, faucetUnits: 300, faucetBchSats: 50_000, claimUnits: 25, claimsToday: 0, dailyCap: 3, lanesOpen: 7 });
+    expect(await r.json()).toMatchObject({ ok: true, faucetUnits: 300, faucetBchSats: 50_000, claimUnits: 25, claimsToday: 0, dailyCap: 12, lanesOpen: 7 });
   });
   it('health is cached for 30 s (an unauthenticated route must not re-read the faucet history on every GET)', async () => {
     const { deps, chain } = rig();

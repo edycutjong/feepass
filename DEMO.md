@@ -69,7 +69,7 @@ Record: `evidence/chipnet-send.json`, rows: `evidence/chipnet-txs.csv`.
 ## 5. Use it with a real wallet (needs the funded pool)
 
 1. Open <https://feepass.edycu.dev>, press **Connect wallet**, approve in a WizardConnect wallet.
-2. Press **Get 0.25 starter PUSD** if the wallet holds none (3 claims per UTC day; the faucet's live balance is at `/api/feepass?op=health`).
+2. Press **Get 0.25 starter PUSD** if the wallet holds none (12 claims per UTC day; the faucet's live balance is at `/api/feepass?op=health`).
 3. Enter a mainnet recipient and an amount, press **Send**, approve one signature request.
 4. On the ticket, compare "spendable BCH before" and "after": the send does not touch them. Open the txid in the explorer (<https://bchexplorer.info/tx/>) and check inputs `in0` (yours) and `in1` (the lane), and that `out2` returns to the pool with exactly 0.01 PUSD more.
 

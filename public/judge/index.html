@@ -101,7 +101,7 @@ pre .c { color: #8C97A3; }
     <h2 id="path-h" class="display">Try it: about 60 seconds</h2>
     <ol class="steps">
       <li><b>Open <a href="https://feepass.edycu.dev">feepass.edycu.dev</a> on a laptop</b> and press <b>Connect wallet</b>. Scan the QR with a WizardConnect wallet and approve (the wallet gate targets Selene and Paytaca; neither is verified yet, see Honest limits). The app is mainnet only.</li>
-      <li><b>No PUSD?</b> Press <b>Get 0.25 starter PUSD</b>: one claim per address, 3 per UTC day, from the faucet shown live above. No BCH is needed for it.</li>
+      <li><b>No PUSD?</b> Press <b>Get 0.25 starter PUSD</b>: one claim per address, 12 per UTC day, from the faucet shown live above. No BCH is needed for it.</li>
       <li><b>Send 0.10 PUSD.</b> The recipient is prefilled (it returns to the faucet). Press <b>Send</b> and approve <b>one</b> signature in your wallet: it signs only your own coin.</li>
       <li><b>Read the ticket:</b> what you sent, the 0.01 PUSD you paid, the lane that paid the miner fee, your spendable BCH before and after (read from the chain), and an explorer link.</li>
     </ol>
@@ -147,7 +147,7 @@ npx tsx scripts/mainnet-send.ts --network mainnet --authorized-cap &lt;bch&gt;</
     <ol class="limits">
       <li><b>One funded lane today</b> (target 20). Two sends in the same moment: the second is asked to re-sign on another lane or retry.</li>
       <li><b>No named wallet verified yet.</b> FeePass asks the wallet to sign input 0 only, with sighash 0x61 (SIGHASH_ALL|FORKID|UTXOS); that is protocol-tested through the real relay with a headless wallet. Whether a given wallet accepts it is exactly what <a href="/gate.html">/gate.html</a> records.</li>
-      <li><b>The starter faucet is small:</b> 0.25 PUSD per address, 3 claims per UTC day. If it says "out for now", use PUSD you already hold.</li>
+      <li><b>The starter faucet is small:</b> 0.25 PUSD per address, 12 claims per UTC day, while its balance lasts. If it says "out for now", use PUSD you already hold.</li>
       <li><b>The covenant does not pick the recipient.</b> Your own signature (sighash 0x61) binds the outputs, as far as your wallet shows them.</li>
       <li><b>Not "zero BCH".</b> A token coin always carries a few hundred sats of dust; the claim is no <em>spendable</em> BCH.</li>
     </ol>

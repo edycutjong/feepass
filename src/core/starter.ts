@@ -52,7 +52,7 @@ export class StarterError extends Error {
   }
 }
 
-export const STARTER_DEFAULTS = { claimUnits: 25n, dailyCap: 3, starterSats: 1400n } as const;
+export const STARTER_DEFAULTS = { claimUnits: 25n, dailyCap: 12, starterSats: 1400n } as const;
 
 const HISTORY_FETCH_LIMIT = 300;
 /** Blocks to look back when fetching header times for the UTC-day cap: > 1 day even when blocks are slow. */

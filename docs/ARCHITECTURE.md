@@ -114,7 +114,7 @@ A judge whose wallet holds no PUSD cannot make the required mainnet send, so one
 - `POST /api/feepass?op=starter` `{address}` → a 0.25 PUSD claim from a faucet key (`FAUCET_WIF`, a Vercel env var, never in the repo).
 - `GET /api/feepass?op=health` → faucet PUSD and BCH, claims today, open lanes, whether the history read was truncated (answer cached 30 s per instance; concurrent misses share one read).
 
-Guarantees are stated at their real strength. **One claim per receiving address and 3 claims per UTC day**, both read from the
+Guarantees are stated at their real strength. **One claim per receiving address and 12 claims per UTC day**, both read from the
 faucet address's own on-chain history (a claim is a tx that spends a faucet coin and pays a token output to another address, so
 the operator's own spends to another address count too, while a consolidation back to the faucet does not; a judge returning
 PUSD to the faucet is not a claim). "Spends a faucet coin" is checked against the spent output's script, not the unlock
@@ -137,11 +137,11 @@ so the first send needs no top-up.
 
 | Risk | Bound |
 |---|---|
-| Someone drains the pool | per tx: the attacker pays `f` (0.01 PUSD) and the pool loses at most `C` = 2,000 sats (R4), of which at most `T` = 675 can reach the attacker's own outputs (R6). `deploy.ts` refuses unless `f` is worth ≥ 1.5 × `C` at the operator's BCH price (true up to about $333/BCH), so a drain costs the attacker more than the pool loses, and every fee stays with the pool. Over many txs it is a liveness risk, not theft: emptying 20 lanes of 100,000 sats takes about 1,000 full-cap spends (about 10 PUSD); free starter PUSD (3 × 25 units a day) pays for at most 75 spends, at most 150,000 sats a day. Refill = sweep + split (§7) |
+| Someone drains the pool | per tx: the attacker pays `f` (0.01 PUSD) and the pool loses at most `C` = 2,000 sats (R4), of which at most `T` = 675 can reach the attacker's own outputs (R6). `deploy.ts` refuses unless `f` is worth ≥ 1.5 × `C` at the operator's BCH price (true up to about $333/BCH), so a drain costs the attacker more than the pool loses, and every fee stays with the pool. Over many txs it is a liveness risk, not theft: emptying 20 lanes of 100,000 sats takes about 1,000 full-cap spends (about 10 PUSD); free starter PUSD (12 × 25 units a day, and never more than the faucet holds) pays for at most 300 spends, at most 600,000 sats a day, and in practice no more than the funded lanes hold. Refill = sweep + split (§7) |
 | Pool keeper's key leaks | the thief can sweep the pool (`withdraw`), never a user's coin; users' coins are never locked in the covenant |
 | A fake front end | cannot move a coin without the user's signature and cannot change the pool's terms (`f`, `C`); whether the user can see what they sign depends on the wallet itemizing outputs (unverified) |
 | Wallet refuses a mixed-input request | `/gate.html` records the result; not claimed compatible until a human verifies it |
-| Faucet drained by fresh addresses | 3 claims per UTC day, small claim size, health route, daily top-up during judging |
+| Faucet drained by fresh addresses | 12 claims per UTC day, small claim size, health route, daily top-up during judging |
 | Pool empty / all lanes busy | named states in the UI ("Pool not open yet", "Pool refilling", "Pool busy"); nothing is signed |
 
 ## 7. Operating it

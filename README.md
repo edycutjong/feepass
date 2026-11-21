@@ -87,7 +87,7 @@ The covenant's eight rules, what each prevents, and the failure model are in [do
 
 ## ⛓️ Live Deployment
 
-> **Status:** the app and the starter route are live at <https://feepass.edycu.dev>. The **mainnet pool is open: 1 funded lane** at the covenant address `bitcoincash:rd2qspagk8vt9e6qz4k3r2a50ns9jrchkh8ystkq6stdlh832a5v5ws2nz942` (derived from `src/config/mainnet.json`, shown on `/pool`). The starter faucet holds PUSD for judges (live balance: `/api/feepass?op=health`; 0.25 per claim, 3 claims per UTC day). The **first sponsored send on mainnet** is [`d59f120b…f8b7`](https://bchexplorer.info/tx/d59f120b5852280d98d6a84379c08e5b3cc11015a9c0f637e60577884aa6f8b7) (record: [`evidence/mainnet-send.json`](evidence/mainnet-send.json)).
+> **Status:** the app and the starter route are live at <https://feepass.edycu.dev>. The **mainnet pool is open: 1 funded lane** at the covenant address `bitcoincash:rd2qspagk8vt9e6qz4k3r2a50ns9jrchkh8ystkq6stdlh832a5v5ws2nz942` (derived from `src/config/mainnet.json`, shown on `/pool`). The starter faucet holds PUSD for judges (live balance: `/api/feepass?op=health`; 0.25 per claim, 12 claims per UTC day). The **first sponsored send on mainnet** is [`d59f120b…f8b7`](https://bchexplorer.info/tx/d59f120b5852280d98d6a84379c08e5b3cc11015a9c0f637e60577884aa6f8b7) (record: [`evidence/mainnet-send.json`](evidence/mainnet-send.json)).
 
 **On mainnet:** the operator scripts' transactions are in [`evidence/mainnet-txs.csv`](evidence/mainnet-txs.csv).
 
@@ -149,7 +149,7 @@ npm run dev     # the app, reading Bitcoin Cash mainnet
 The pool has 1 open lane, so if two people send in the same moment one of them is asked to re-sign on another lane or retry.
 
 1. Open <https://feepass.edycu.dev> and press **Connect wallet**; approve in a WizardConnect wallet.
-2. No PUSD yet? **Get 0.25 starter PUSD** gives one claim per address (3 per UTC day; live balance at `/api/feepass?op=health`).
+2. No PUSD yet? **Get 0.25 starter PUSD** gives one claim per address (12 per UTC day; live balance at `/api/feepass?op=health`).
 3. Enter a mainnet recipient and an amount, then **Send**. Approve the single signature request.
 4. The ticket shows what was sent, the fee you paid in PUSD, the lane that paid the miner fee, and your spendable BCH before and after.
 
